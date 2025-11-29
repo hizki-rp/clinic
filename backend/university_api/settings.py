@@ -46,6 +46,10 @@ ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_str.split(',')]
 if 'uni-find-api.onrender.com' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append('uni-find-api.onrender.com')
 
+# Add clinic Render domain
+if 'clinic-nesc.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('clinic-nesc.onrender.com')
+
 # Add Codespaces domains
 ALLOWED_HOSTS.extend([
     'symmetrical-doodle-5w7q67grxj37j7-8000.app.github.dev',
@@ -59,7 +63,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'https://symmetrical-doodle-5w7q67grxj37j7-9002.app.github.dev',
-
+    'https://clinic-nesc.onrender.com',  # Backend Render deployment
+    'https://clinic-l8sc.vercel.app',  # Frontend Vercel deployment
 ]
 
 # Trust the 'X-Forwarded-Proto' header from the reverse proxy (like Render)
@@ -72,6 +77,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:4173", # LOCAL BUILD
     "http://localhost:9002", # Vite healthcare frontend
+    "https://clinic-l8sc.vercel.app", # Vercel frontend deployment
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
