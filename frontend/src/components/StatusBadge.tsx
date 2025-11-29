@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 import clsx from "clsx";
-import React from "react";
 import { type Status } from "@/lib/types";
 
 const StatusBadge = ({ status }: { status: Status }) => {

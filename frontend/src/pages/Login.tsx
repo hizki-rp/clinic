@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Stethoscope, Shield, User, TestTube, UserCheck, Loader2, Heart } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 export default function Login() {
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { type Patient, usePatientQueue } from '@/context/PatientQueueContext';
 import { Button } from '@/components/ui/button';
-import { FileText, Eye, UserPlus, Edit, Trash2, Calendar } from 'lucide-react';
+import { Eye, UserPlus, Edit, Trash2, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from './ui/badge';
 import {
@@ -42,10 +42,6 @@ const PatientDataTable = ({ data }: PatientDataTableProps) => {
 
   const handleViewSummary = (patientId: string) => {
     navigate(`/patients/${patientId}/summary`);
-  };
-
-  const handleViewPrescription = (patientId: string) => {
-    navigate(`/patients/${patientId}/prescription`);
   };
 
   const openReAdmitAlert = (patient: Patient) => {

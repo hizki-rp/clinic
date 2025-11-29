@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Edit, Trash2, Search, Filter, UserCheck, Clock, Calendar } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search } from 'lucide-react';
 
 interface Staff {
   id: number;
@@ -30,11 +30,7 @@ interface StaffFormData {
   hourly_rate: string;
 }
 
-interface StaffManagementProps {
-  filterRole?: string;
-}
-
-const StaffManagement: React.FC<StaffManagementProps> = ({ filterRole = '' }) => {
+const StaffManagement: React.FC = () => {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<Staff[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,13 +60,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ filterRole = '' }) =>
 
   useEffect(() => {
     filterStaff();
-  }, [staff, searchTerm, filterRole, filterDepartment, filterRole]);
-
-  useEffect(() => {
-    if (filterRole) {
-      setFilterRole(filterRole);
-    }
-  }, [filterRole]);
+  }, [staff, searchTerm, filterRole, filterDepartment]);
 
   const fetchStaff = async () => {
     try {
@@ -78,7 +68,7 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ filterRole = '' }) =>
       if (response.ok) {
         const data = await response.json();
         // Transform backend data to match component expectations
-        const transformedData = data.map(staff => ({
+        const transformedData = data.map((staff: any) => ({
           id: staff.id,
           first_name: staff.user?.first_name || '',
           last_name: staff.user?.last_name || '',

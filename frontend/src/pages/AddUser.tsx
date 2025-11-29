@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { usePatientQueue } from '@/context/PatientQueueContext';
+import { usePatientQueue, type PatientPriority } from '@/context/PatientQueueContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Loader2, UserPlus, X, User, Calendar, Mail, Phone, MapPin, AlertTriangle } from 'lucide-react';
@@ -192,14 +192,14 @@ export default function AddUser() {
       }
 
       // Add patient to queue
-      const patientData = { 
-        name: name.trim(), 
-        email: email.trim() || undefined, 
-        phone: phone.trim() || undefined, 
-        address: address.trim() || undefined, 
-        age, 
-        sex, 
-        priority: isUrgent ? 'Urgent' : 'Standard' 
+      const patientData = {
+        name: name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        address: address.trim() || undefined,
+        age,
+        sex,
+        priority: (isUrgent ? 'Urgent' : 'Standard') as PatientPriority
       };
       
       await addPatient(patientData);

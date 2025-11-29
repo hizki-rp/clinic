@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import '../styles/queue-enhancements.css';
-import { ArrowRight, User, Stethoscope, Beaker, ClipboardPlus, Printer, Plus, UserCheck, TestTube, LogOut, FileText, AlertTriangle, CheckCircle2, Clock, Phone, MapPin, Calendar, Activity, Zap, Timer, Home, FlaskConical } from 'lucide-react';
+import { ArrowRight, User, Stethoscope, ClipboardPlus, Printer, Plus, UserCheck, TestTube, LogOut, FileText, AlertTriangle, CheckCircle2, Clock, Phone, MapPin, Calendar, Activity } from 'lucide-react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -25,7 +25,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { Badge } from '@/components/ui/badge';
@@ -50,8 +49,6 @@ const getRelevantStages = (userRole: string): QueueStage[] => {
   }
 };
 const AVAILABLE_LAB_TESTS = ["Complete Blood Count (CBC)", "Urinalysis", "Blood Glucose", "Lipid Panel", "Liver Function Test"];
-
-type Role = 'Receptionist' | 'Doctor' | 'Laboratorian';
 
 const PatientCard = ({ patient }: { patient: Patient }) => {
   const { movePatient } = usePatientQueue();
@@ -502,26 +499,30 @@ export default function ClinicQueueManager() {
   // Filter patients to only show those in relevant stages
   const relevantPatients = patients.filter(p => relevantStages.includes(p.stage));
 
-  const stageConfig = {
-    'Waiting Room': { 
-      color: 'bg-blue-500', 
-      icon: <User className="h-4 w-4" /> 
+  const stageConfig: Record<QueueStage, { color: string; icon: JSX.Element }> = {
+    'Waiting Room': {
+      color: 'bg-blue-500',
+      icon: <User className="h-4 w-4" />
     },
-    'Triage': { 
-      color: 'bg-teal-500', 
-      icon: <Activity className="h-4 w-4" /> 
+    'Triage': {
+      color: 'bg-teal-500',
+      icon: <Activity className="h-4 w-4" />
     },
-    'Questioning': { 
-      color: 'bg-yellow-500', 
-      icon: <Stethoscope className="h-4 w-4" /> 
+    'Questioning': {
+      color: 'bg-yellow-500',
+      icon: <Stethoscope className="h-4 w-4" />
     },
-    'Laboratory Test': { 
-      color: 'bg-purple-500', 
-      icon: <TestTube className="h-4 w-4" /> 
+    'Laboratory Test': {
+      color: 'bg-purple-500',
+      icon: <TestTube className="h-4 w-4" />
     },
-    'Results by Doctor': { 
-      color: 'bg-green-500', 
-      icon: <FileText className="h-4 w-4" /> 
+    'Results by Doctor': {
+      color: 'bg-green-500',
+      icon: <FileText className="h-4 w-4" />
+    },
+    'Discharged': {
+      color: 'bg-gray-500',
+      icon: <CheckCircle2 className="h-4 w-4" />
     },
   };
 

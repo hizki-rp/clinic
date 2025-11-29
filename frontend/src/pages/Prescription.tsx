@@ -1,7 +1,7 @@
 'use client';
 import { usePatientQueue } from '@/context/PatientQueueContext';
 import { useParams, useNavigate } from 'react-router-dom';
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Patient } from '@/context/PatientQueueContext';
 import { Button } from "@/components/ui/button";
 import { Printer } from 'lucide-react';

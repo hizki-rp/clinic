@@ -6,7 +6,8 @@ export interface SearchParamProps {
 }
 
 export interface Appointment {
-  patient: { name: string, image?: string };
+  id?: string;
+  patient: { name: string, image?: string, phone?: string };
   schedule: string;
   status: Status;
   primaryPhysician: string;
