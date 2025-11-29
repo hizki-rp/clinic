@@ -13,17 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { 
-  Users, 
+import {
+  Users,
   UserPlus,
-  Clock, 
-  DollarSign, 
+  Clock,
+  DollarSign,
   Plus,
-  Search,
-  Download,
-  Calendar,
-  Building,
-  Settings
+  Building
 } from 'lucide-react';
 
 interface Staff {
@@ -69,6 +65,12 @@ interface PayrollEntry {
   net_pay: string;
 }
 
+interface CreatedCredentials {
+  employee_id: string;
+  email: string;
+  password: string;
+}
+
 const StaffManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -91,7 +93,7 @@ const StaffManagement = () => {
     specialization: '',
     license_number: ''
   });
-  const [createdCredentials, setCreatedCredentials] = useState(null);
+  const [createdCredentials, setCreatedCredentials] = useState<CreatedCredentials | null>(null);
 
   const [newShiftForm, setNewShiftForm] = useState({
     staff_id: '',
@@ -309,13 +311,15 @@ const StaffManagement = () => {
       return;
     }
     
-    if ((user?.role === 'doctor' || user?.role === 'laboratory') && newRole !== 'reception') {
-      toast({
-        variant: 'destructive',
-        title: 'Access Denied',
-        description: 'You can only change roles to Reception.',
-      });
-      return;
+    if (user?.role === 'doctor' || user?.role === 'laboratory') {
+      if (newRole !== 'reception') {
+        toast({
+          variant: 'destructive',
+          title: 'Access Denied',
+          description: 'You can only change roles to Reception.',
+        });
+        return;
+      }
     }
 
     try {
@@ -548,10 +552,9 @@ const StaffManagement = () => {
                           {user?.role === 'admin' || 
                            (user?.role === 'doctor' && member.user.role !== 'reception') ||
                            (user?.role === 'laboratory' && member.user.role !== 'reception') ? (
-                            <Select 
-                              value={member.user.role} 
+                            <Select
+                              value={member.user.role}
                               onValueChange={(newRole) => updateStaffRole(member.id, newRole)}
-                              disabled={user?.role === 'reception'}
                             >
                               <SelectTrigger className="w-32">
                                 <SelectValue />

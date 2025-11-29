@@ -14,8 +14,8 @@ export async function extractUserData(frontImage?: string, backImage?: string) {
 Return ONLY a JSON object with these fields: name, email, phone, address. 
 If a field is not visible, use null for that field.`;
 
-  const parts = [{ text: prompt }];
-  
+  const parts: any[] = [{ text: prompt }];
+
   if (frontImage) {
     parts.push({
       inlineData: {
@@ -24,11 +24,11 @@ If a field is not visible, use null for that field.`;
       }
     });
   }
-  
+
   if (backImage) {
     parts.push({
       inlineData: {
-        mimeType: 'image/jpeg', 
+        mimeType: 'image/jpeg',
         data: backImage.split(',')[1]
       }
     });

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Sidebar, SidebarContent, SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Home, User, UserPlus, LayoutDashboard, ListOrdered, LogOut, Users, Calendar, FileText, Activity, Settings } from 'lucide-react';
+import { Home, User, UserPlus, LayoutDashboard, ListOrdered, LogOut, Users, Calendar, Activity, Settings } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth } from './AuthProvider';
 import { Button } from '@/components/ui/button';

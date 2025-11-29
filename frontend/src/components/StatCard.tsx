@@ -1,13 +1,10 @@
-import clsx from "clsx";
-
 interface StatCardProps {
-  type: "appointments" | "pending" | "cancelled" | "lab" | "discharged";
   count: number;
   label: string;
   icon: string;
 }
 
-const StatCard = ({ count = 0, label, icon, type }: StatCardProps) => {
+const StatCard = ({ count = 0, label, icon }: StatCardProps) => {
   return (
     <div className="stat-card border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
       <div className="flex items-center gap-4">

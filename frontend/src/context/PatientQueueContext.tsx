@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { healthcareApi } from '@/lib/api';
 
 export type QueueStage = 'Waiting Room' | 'Triage' | 'Questioning' | 'Laboratory Test' | 'Results by Doctor' | 'Discharged';
