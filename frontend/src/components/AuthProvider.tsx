@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authApi } from '@/lib/api';
+import { API_BASE_URL } from '@/lib/constants';
 
 interface User {
   id: number;
@@ -50,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('refresh_token', response.refresh);
       
       // Fetch user profile to get role and other details
-      const userResponse = await fetch('http://localhost:8000/api/auth/profile/', {
+      const userResponse = await fetch(`${API_BASE_URL}/auth/profile/`, {
         headers: {
           'Authorization': `Bearer ${response.access}`,
           'Content-Type': 'application/json',

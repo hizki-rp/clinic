@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +32,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ onClose, onSa
   const fetchDoctors = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/auth/doctors/', {
+      const response = await fetch(`${API_BASE_URL}/auth/doctors/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -52,7 +53,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ onClose, onSa
 
     try {
       // First create or find patient
-      const patientResponse = await fetch('http://localhost:8000/api/healthcare/patients/', {
+      const patientResponse = await fetch(`${API_BASE_URL}/healthcare/patients/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,7 +76,7 @@ const NewAppointmentModal: React.FC<NewAppointmentModalProps> = ({ onClose, onSa
       // Then create appointment
       const appointmentDateTime = `${formData.appointment_date}T${formData.appointment_time}:00`;
       
-      const appointmentResponse = await fetch('http://localhost:8000/api/healthcare/appointments/', {
+      const appointmentResponse = await fetch(`${API_BASE_URL}/healthcare/appointments/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

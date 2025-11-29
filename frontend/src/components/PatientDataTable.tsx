@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import {
   Table,
   TableBody,
@@ -80,7 +81,7 @@ const PatientDataTable = ({ data }: PatientDataTableProps) => {
   const confirmDelete = async () => {
     if (selectedPatient) {
       try {
-        const response = await fetch(`http://localhost:8000/api/healthcare/patients/${selectedPatient.id}/`, {
+        const response = await fetch(`${API_BASE_URL}/healthcare/patients/${selectedPatient.id}/`, {
           method: 'DELETE'
         });
         if (response.ok) {

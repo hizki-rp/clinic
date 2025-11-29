@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +31,7 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({ patient, onClose, o
       const [firstName, ...lastNameParts] = formData.name.split(' ');
       const lastName = lastNameParts.join(' ');
 
-      const response = await fetch(`http://localhost:8000/api/healthcare/patients/${patient.id}/`, {
+      const response = await fetch(`${API_BASE_URL}/healthcare/patients/${patient.id}/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

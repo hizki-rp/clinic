@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,9 +68,9 @@ const EHRManagement: React.FC = () => {
     try {
       setLoading(true);
       const [medicalHistoryRes, allergiesRes, medicationsRes] = await Promise.all([
-        fetch('http://localhost:8000/api/healthcare/medical-history/'),
-        fetch('http://localhost:8000/api/healthcare/allergies/'),
-        fetch('http://localhost:8000/api/healthcare/patient-medications/')
+        fetch(`${API_BASE_URL}/healthcare/medical-history/'),
+        fetch(`${API_BASE_URL}/healthcare/allergies/'),
+        fetch(`${API_BASE_URL}/healthcare/patient-medications/')
       ]);
 
       const [medicalHistoryData, allergiesData, medicationsData] = await Promise.all([

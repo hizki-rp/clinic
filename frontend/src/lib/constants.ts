@@ -1,6 +1,9 @@
 import { PlaceHolderImages } from "./placeholder-images";
 import { type Status } from "./types";
 
+// API Configuration
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
 export const Doctors = [
   {
     image: PlaceHolderImages.find(img => img.id === 'dr-alcantara')?.imageUrl ?? '',

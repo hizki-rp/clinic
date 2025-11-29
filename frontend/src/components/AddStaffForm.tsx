@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,7 +32,7 @@ const AddStaffForm: React.FC<AddStaffFormProps> = ({ onStaffAdded }) => {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/healthcare/staff/onboard/', {
+      const response = await fetch(`${API_BASE_URL}/healthcare/staff/onboard/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

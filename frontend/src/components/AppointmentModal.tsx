@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +31,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ patient, onClose, o
 
   const fetchDoctors = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/healthcare/staff/?role=doctor');
+      const response = await fetch(`${API_BASE_URL}/healthcare/staff/?role=doctor');
       if (response.ok) {
         const data = await response.json();
         setDoctors(data);
@@ -47,7 +48,7 @@ const AppointmentModal: React.FC<AppointmentModalProps> = ({ patient, onClose, o
     try {
       const appointmentDateTime = `${formData.appointment_date}T${formData.appointment_time}:00`;
       
-      const response = await fetch('http://localhost:8000/api/healthcare/appointments/', {
+      const response = await fetch(`${API_BASE_URL}/healthcare/appointments/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

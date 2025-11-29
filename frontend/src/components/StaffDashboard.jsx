@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import { Users, Plus, UserCheck, Clock, Calendar, DollarSign } from 'lucide-react';
 import StaffManagement from './StaffManagement';
 
@@ -17,7 +18,7 @@ const StaffDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/healthcare/staff/dashboard_stats/');
+      const response = await fetch(`${API_BASE_URL}/healthcare/staff/dashboard_stats/');
       if (response.ok) {
         const data = await response.json();
         setStats(data);

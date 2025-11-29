@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import { Calendar, Clock, Plus, Filter, X } from 'lucide-react';
 import { usePatientQueue } from '../context/PatientQueueContext';
 import { healthcareApi } from '@/lib/api'; // Import the API client
@@ -63,7 +64,7 @@ const Appointments = () => {
   const fetchDoctors = async () => {
     try {
       // Use the authentication API endpoint for doctors
-      const response = await fetch('http://localhost:8000/api/auth/doctors/', {
+      const response = await fetch(`${API_BASE_URL}/auth/doctors/', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import { Users, Plus, Edit, Trash2, Search } from 'lucide-react';
 
 interface Staff {
@@ -64,7 +65,7 @@ const StaffManagement: React.FC = () => {
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/healthcare/staff/');
+      const response = await fetch(`${API_BASE_URL}/healthcare/staff/');
       if (response.ok) {
         const data = await response.json();
         // Transform backend data to match component expectations
@@ -105,7 +106,7 @@ const StaffManagement: React.FC = () => {
     try {
       if (editingStaff) {
         // Update existing staff
-        const response = await fetch(`http://localhost:8000/api/healthcare/staff/${editingStaff.id}/`, {
+        const response = await fetch(`${API_BASE_URL}/healthcare/staff/${editingStaff.id}/`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -121,7 +122,7 @@ const StaffManagement: React.FC = () => {
         }
       } else {
         // Create new staff using onboard endpoint
-        const response = await fetch('http://localhost:8000/api/healthcare/staff/onboard/', {
+        const response = await fetch(`${API_BASE_URL}/healthcare/staff/onboard/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -174,7 +175,7 @@ const StaffManagement: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this staff member?')) {
       try {
-        const response = await fetch(`http://localhost:8000/api/healthcare/staff/${id}/`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE_URL}/healthcare/staff/${id}/`, { method: 'DELETE' });
         if (response.ok) {
           fetchStaff();
         }

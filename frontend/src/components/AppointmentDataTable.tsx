@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/lib/constants';
 import {
   Table,
   TableBody,
@@ -70,7 +71,7 @@ const AppointmentDataTable = ({ data }: AppointmentDataTableProps) => {
 
   const handleCancelAppointment = async (appointment: Appointment) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/healthcare/appointments/${appointment.id}/cancel/`, {
+      const response = await fetch(`${API_BASE_URL}/healthcare/appointments/${appointment.id}/cancel/`, {
         method: 'POST'
       });
       if (response.ok) {
