@@ -1,5 +1,9 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError as DjangoValidationError
+from datetime import datetime, timedelta
+import re
 from .models import (
     Patient, Visit, LabTest, Prescription, Medication, Appointment, MedicalRecord,
     MedicalHistory, Allergy, PatientMedication, StaffProfile, Shift, PayrollEntry, PerformanceReview
@@ -39,7 +43,25 @@ class PatientCreateSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=100, required=False, write_only=True)  # Full name field
     email = serializers.EmailField(required=False)
     username = serializers.CharField(max_length=150, required=False)
-    
+
+    # Add validators for phone and age
+    phone = serializers.CharField(
+        max_length=20,
+        required=False,
+        allow_blank=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\+?1?\d{9,15}$',
+                message='Phone number must be entered in the format: "+999999999". Up to 15 digits allowed.'
+            )
+        ]
+    )
+    age = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        validators=[MinValueValidator(0), MaxValueValidator(150)]
+    )
+
     class Meta:
         model = Patient
         fields = [
@@ -47,6 +69,53 @@ class PatientCreateSerializer(serializers.ModelSerializer):
             'medical_history', 'allergies', 'current_medications', 'emergency_contact_name',
             'emergency_contact_phone', 'insurance_provider', 'insurance_policy_number', 'priority'
         ]
+
+    def validate_email(self, value):
+        """Ensure email is unique across users"""
+        if value and User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_username(self, value):
+        """Ensure username is unique"""
+        if value and User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate_emergency_contact_phone(self, value):
+        """Validate emergency contact phone format"""
+        if value and not re.match(r'^\+?1?\d{9,15}$', value):
+            raise serializers.ValidationError(
+                'Emergency contact phone must be entered in the format: "+999999999". Up to 15 digits allowed.'
+            )
+        return value
+
+    def validate_insurance_policy_number(self, value):
+        """Validate insurance policy number format"""
+        if value and len(value) < 5:
+            raise serializers.ValidationError(
+                'Insurance policy number must be at least 5 characters long.'
+            )
+        return value
+
+    def validate(self, data):
+        """Cross-field validation"""
+        # Ensure minors (under 18) have emergency contact
+        age = data.get('age')
+        if age and age < 18:
+            if not data.get('emergency_contact_name') or not data.get('emergency_contact_phone'):
+                raise serializers.ValidationError({
+                    'emergency_contact_name': 'Emergency contact is required for patients under 18 years old.',
+                    'emergency_contact_phone': 'Emergency contact phone is required for patients under 18 years old.'
+                })
+
+        # If insurance provider is specified, policy number is required
+        if data.get('insurance_provider') and not data.get('insurance_policy_number'):
+            raise serializers.ValidationError({
+                'insurance_policy_number': 'Insurance policy number is required when insurance provider is specified.'
+            })
+
+        return data
     
     def create(self, validated_data):
         # Handle different name input formats
@@ -94,7 +163,7 @@ class LabTestSerializer(serializers.ModelSerializer):
     requested_by = UserSerializer(read_only=True)
     performed_by = UserSerializer(read_only=True)
     patient_name = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = LabTest
         fields = [
@@ -103,9 +172,62 @@ class LabTestSerializer(serializers.ModelSerializer):
             'patient_name'
         ]
         read_only_fields = ['requested_at', 'completed_at']
-    
+
     def get_patient_name(self, obj):
         return obj.visit.patient.user.get_full_name()
+
+    def validate_test_name(self, value):
+        """Ensure test name is meaningful"""
+        if not value or len(value.strip()) < 3:
+            raise serializers.ValidationError("Test name must be at least 3 characters long.")
+        return value
+
+    def validate_test_type(self, value):
+        """Validate test type against common lab tests"""
+        valid_types = [
+            'blood', 'urine', 'xray', 'mri', 'ct_scan', 'ultrasound',
+            'ecg', 'biopsy', 'culture', 'pathology', 'other'
+        ]
+        if value and value.lower().replace(' ', '_') not in valid_types:
+            # Allow any test type, but log a warning
+            pass
+        return value
+
+    def validate(self, data):
+        """Cross-field validation for lab tests"""
+        status = data.get('status')
+        results = data.get('results')
+
+        # If status is completed, results must be provided
+        if status == 'completed':
+            if not results or len(results.strip()) < 5:
+                raise serializers.ValidationError({
+                    'results': 'Test results are required when marking a test as completed.',
+                    'status': 'Cannot mark test as completed without results.'
+                })
+
+            # Ensure normal range is provided for completed tests
+            if not data.get('normal_range'):
+                raise serializers.ValidationError({
+                    'normal_range': 'Normal range should be specified for completed tests.'
+                })
+
+        # If results are provided, status should not be 'requested'
+        if results and status == 'requested':
+            raise serializers.ValidationError({
+                'status': 'Test status should be updated to "in_progress" or "completed" when results are entered.'
+            })
+
+        # Validate result format for specific test types
+        test_type = data.get('test_type', '')
+        if status == 'completed' and results:
+            if test_type.lower() in ['blood', 'urine']:
+                # Ensure numeric values or proper format
+                if not any(char.isdigit() for char in results):
+                    # Warning only, don't fail
+                    pass
+
+        return data
 
 
 class PrescriptionSerializer(serializers.ModelSerializer):
@@ -178,19 +300,83 @@ class AppointmentSerializer(serializers.ModelSerializer):
     patient_detail = PatientSerializer(source='patient', read_only=True)
     doctor_detail = UserSerializer(source='doctor', read_only=True)
     booked_by = UserSerializer(read_only=True)
-    
+
     # Add writable fields for patient and doctor IDs
     patient = serializers.PrimaryKeyRelatedField(queryset=Patient.objects.all())
     doctor = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(role='doctor'))
-    
+
     class Meta:
         model = Appointment
         fields = [
-            'id', 'patient', 'patient_detail', 'doctor', 'doctor_detail', 'appointment_date', 
-            'duration_minutes', 'reason', 'notes', 'status', 'is_follow_up', 'previous_visit', 
+            'id', 'patient', 'patient_detail', 'doctor', 'doctor_detail', 'appointment_date',
+            'duration_minutes', 'reason', 'notes', 'status', 'is_follow_up', 'previous_visit',
             'booked_by', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'patient_detail', 'doctor_detail']
+
+    def validate_appointment_date(self, value):
+        """Ensure appointment is not in the past"""
+        if value < datetime.now():
+            raise serializers.ValidationError(
+                'Appointment date cannot be in the past.'
+            )
+        return value
+
+    def validate_duration_minutes(self, value):
+        """Ensure duration is reasonable"""
+        if value < 15:
+            raise serializers.ValidationError(
+                'Appointment duration must be at least 15 minutes.'
+            )
+        if value > 480:  # 8 hours
+            raise serializers.ValidationError(
+                'Appointment duration cannot exceed 8 hours.'
+            )
+        return value
+
+    def validate_reason(self, value):
+        """Ensure reason is provided and meaningful"""
+        if not value or len(value.strip()) < 5:
+            raise serializers.ValidationError(
+                'Appointment reason must be at least 5 characters long.'
+            )
+        return value
+
+    def validate(self, data):
+        """Prevent double-booking - check for overlapping appointments"""
+        doctor = data.get('doctor')
+        appointment_date = data.get('appointment_date')
+        duration_minutes = data.get('duration_minutes', 30)
+
+        if doctor and appointment_date:
+            # Calculate appointment end time
+            appointment_end = appointment_date + timedelta(minutes=duration_minutes)
+
+            # Build query to check for overlapping appointments
+            overlapping_query = Appointment.objects.filter(
+                doctor=doctor,
+                status__in=['scheduled', 'confirmed'],  # Only active appointments
+            )
+
+            # Exclude current appointment if updating
+            if self.instance:
+                overlapping_query = overlapping_query.exclude(pk=self.instance.pk)
+
+            # Check each potentially overlapping appointment
+            for existing_appt in overlapping_query:
+                existing_end = existing_appt.appointment_date + timedelta(
+                    minutes=existing_appt.duration_minutes
+                )
+
+                # Check if appointments overlap
+                if (appointment_date < existing_end and
+                    appointment_end > existing_appt.appointment_date):
+                    raise serializers.ValidationError({
+                        'appointment_date': f'This appointment overlaps with an existing appointment for Dr. {doctor.get_full_name()} at {existing_appt.appointment_date.strftime("%Y-%m-%d %H:%M")}.',
+                        'doctor': 'This doctor is not available at the selected time.'
+                    })
+
+        return data
 
 
 class MedicalRecordSerializer(serializers.ModelSerializer):
@@ -326,18 +512,72 @@ class StaffProfileSerializer(serializers.ModelSerializer):
 
 
 class StaffCreateSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(max_length=30)
-    last_name = serializers.CharField(max_length=30)
-    email = serializers.EmailField()
+    first_name = serializers.CharField(max_length=30, required=True)
+    last_name = serializers.CharField(max_length=30, required=True)
+    email = serializers.EmailField(required=True)
     username = serializers.CharField(max_length=150, required=False)
-    role = serializers.ChoiceField(choices=['reception', 'doctor', 'laboratory', 'staff'])
-    
+    role = serializers.ChoiceField(choices=['reception', 'doctor', 'laboratory', 'staff'], required=True)
+
+    # Add validators
+    hourly_rate = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=True,
+        validators=[MinValueValidator(0.01)]
+    )
+
     class Meta:
         model = StaffProfile
         fields = [
             'first_name', 'last_name', 'email', 'username', 'role',
             'hire_date', 'employment_status', 'hourly_rate', 'department', 'supervisor'
         ]
+
+    def validate_email(self, value):
+        """Ensure email is unique"""
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_username(self, value):
+        """Ensure username is unique"""
+        if value and User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate_hire_date(self, value):
+        """Ensure hire date is not in the future"""
+        from datetime import date
+        if value > date.today():
+            raise serializers.ValidationError("Hire date cannot be in the future.")
+        return value
+
+    def validate_department(self, value):
+        """Ensure department is specified"""
+        if not value or len(value.strip()) < 2:
+            raise serializers.ValidationError("Department must be specified and at least 2 characters long.")
+        return value
+
+    def validate(self, data):
+        """Cross-field validation"""
+        # Doctor role requires specific department validation
+        role = data.get('role')
+        department = data.get('department')
+
+        if role == 'doctor' and department:
+            valid_departments = ['cardiology', 'pediatrics', 'orthopedics', 'general', 'emergency', 'surgery']
+            if department.lower() not in valid_departments:
+                # Just a warning, don't fail validation
+                pass
+
+        # Ensure employment status is valid
+        employment_status = data.get('employment_status', 'active')
+        if employment_status not in ['active', 'on_leave', 'terminated']:
+            raise serializers.ValidationError({
+                'employment_status': 'Employment status must be one of: active, on_leave, terminated.'
+            })
+
+        return data
     
     def create(self, validated_data):
         # Extract user fields
