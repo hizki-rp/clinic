@@ -60,6 +60,11 @@ const EHRManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // Edit states
+  const [editingHistory, setEditingHistory] = useState<MedicalHistory | null>(null);
+  const [editingAllergy, setEditingAllergy] = useState<Allergy | null>(null);
+  const [editingMedication, setEditingMedication] = useState<PatientMedication | null>(null);
+
   useEffect(() => {
     fetchEHRData();
   }, []);
@@ -86,6 +91,134 @@ const EHRManagement: React.FC = () => {
       console.error('Error fetching EHR data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Delete handlers
+  const handleDeleteHistory = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this medical history record?')) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/healthcare/medical-history/${id}/`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setMedicalHistories(medicalHistories.filter(h => h.id !== id));
+        alert('Medical history deleted successfully');
+      } else {
+        alert('Failed to delete medical history');
+      }
+    } catch (error) {
+      console.error('Error deleting medical history:', error);
+      alert('An error occurred while deleting');
+    }
+  };
+
+  const handleDeleteAllergy = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this allergy record?')) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/healthcare/allergies/${id}/`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setAllergies(allergies.filter(a => a.id !== id));
+        alert('Allergy deleted successfully');
+      } else {
+        alert('Failed to delete allergy');
+      }
+    } catch (error) {
+      console.error('Error deleting allergy:', error);
+      alert('An error occurred while deleting');
+    }
+  };
+
+  const handleDeleteMedication = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this medication record?')) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/healthcare/patient-medications/${id}/`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setMedications(medications.filter(m => m.id !== id));
+        alert('Medication deleted successfully');
+      } else {
+        alert('Failed to delete medication');
+      }
+    } catch (error) {
+      console.error('Error deleting medication:', error);
+      alert('An error occurred while deleting');
+    }
+  };
+
+  // Update handlers
+  const handleUpdateHistory = async (updatedHistory: MedicalHistory) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/healthcare/medical-history/${updatedHistory.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedHistory),
+      });
+
+      if (response.ok) {
+        const updated = await response.json();
+        setMedicalHistories(medicalHistories.map(h => h.id === updated.id ? updated : h));
+        setEditingHistory(null);
+        alert('Medical history updated successfully');
+      } else {
+        alert('Failed to update medical history');
+      }
+    } catch (error) {
+      console.error('Error updating medical history:', error);
+      alert('An error occurred while updating');
+    }
+  };
+
+  const handleUpdateAllergy = async (updatedAllergy: Allergy) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/healthcare/allergies/${updatedAllergy.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedAllergy),
+      });
+
+      if (response.ok) {
+        const updated = await response.json();
+        setAllergies(allergies.map(a => a.id === updated.id ? updated : a));
+        setEditingAllergy(null);
+        alert('Allergy updated successfully');
+      } else {
+        alert('Failed to update allergy');
+      }
+    } catch (error) {
+      console.error('Error updating allergy:', error);
+      alert('An error occurred while updating');
+    }
+  };
+
+  const handleUpdateMedication = async (updatedMedication: PatientMedication) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/healthcare/patient-medications/${updatedMedication.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedMedication),
+      });
+
+      if (response.ok) {
+        const updated = await response.json();
+        setMedications(medications.map(m => m.id === updated.id ? updated : m));
+        setEditingMedication(null);
+        alert('Medication updated successfully');
+      } else {
+        alert('Failed to update medication');
+      }
+    } catch (error) {
+      console.error('Error updating medication:', error);
+      alert('An error occurred while updating');
     }
   };
 
@@ -231,10 +364,20 @@ const EHRManagement: React.FC = () => {
                         <p className="text-sm">{history.description}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingHistory(history)}
+                          title="Edit medical history"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteHistory(history.id)}
+                          title="Delete medical history"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -244,7 +387,7 @@ const EHRManagement: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="allergies">
           <Card>
             <CardHeader>
@@ -286,10 +429,20 @@ const EHRManagement: React.FC = () => {
                         <p className="text-sm"><strong>Reaction:</strong> {allergy.reaction}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingAllergy(allergy)}
+                          title="Edit allergy"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteAllergy(allergy.id)}
+                          title="Delete allergy"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -299,7 +452,7 @@ const EHRManagement: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="medications">
           <Card>
             <CardHeader>
@@ -351,10 +504,20 @@ const EHRManagement: React.FC = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingMedication(medication)}
+                          title="Edit medication"
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteMedication(medication.id)}
+                          title="Delete medication"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -365,6 +528,116 @@ const EHRManagement: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Simple inline edit forms - can be replaced with proper dialogs later */}
+      {editingHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Edit Medical History</h3>
+            <div className="space-y-3">
+              <Input
+                placeholder="Condition Name"
+                value={editingHistory.condition_name}
+                onChange={(e) => setEditingHistory({...editingHistory, condition_name: e.target.value})}
+              />
+              <Input
+                placeholder="Description"
+                value={editingHistory.description}
+                onChange={(e) => setEditingHistory({...editingHistory, description: e.target.value})}
+              />
+              <Input
+                type="date"
+                value={editingHistory.diagnosis_date}
+                onChange={(e) => setEditingHistory({...editingHistory, diagnosis_date: e.target.value})}
+              />
+              <div className="flex gap-2">
+                <Button onClick={() => handleUpdateHistory(editingHistory)}>
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setEditingHistory(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingAllergy && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Edit Allergy</h3>
+            <div className="space-y-3">
+              <Input
+                placeholder="Allergen"
+                value={editingAllergy.allergen}
+                onChange={(e) => setEditingAllergy({...editingAllergy, allergen: e.target.value})}
+              />
+              <Input
+                placeholder="Reaction"
+                value={editingAllergy.reaction}
+                onChange={(e) => setEditingAllergy({...editingAllergy, reaction: e.target.value})}
+              />
+              <select
+                className="w-full p-2 border rounded"
+                value={editingAllergy.severity}
+                onChange={(e) => setEditingAllergy({...editingAllergy, severity: e.target.value})}
+              >
+                <option value="mild">Mild</option>
+                <option value="moderate">Moderate</option>
+                <option value="severe">Severe</option>
+                <option value="life_threatening">Life Threatening</option>
+              </select>
+              <div className="flex gap-2">
+                <Button onClick={() => handleUpdateAllergy(editingAllergy)}>
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setEditingAllergy(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingMedication && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Edit Medication</h3>
+            <div className="space-y-3">
+              <Input
+                placeholder="Medication Name"
+                value={editingMedication.medication_name}
+                onChange={(e) => setEditingMedication({...editingMedication, medication_name: e.target.value})}
+              />
+              <Input
+                placeholder="Dosage"
+                value={editingMedication.dosage}
+                onChange={(e) => setEditingMedication({...editingMedication, dosage: e.target.value})}
+              />
+              <Input
+                placeholder="Frequency"
+                value={editingMedication.frequency}
+                onChange={(e) => setEditingMedication({...editingMedication, frequency: e.target.value})}
+              />
+              <Input
+                placeholder="Notes"
+                value={editingMedication.notes}
+                onChange={(e) => setEditingMedication({...editingMedication, notes: e.target.value})}
+              />
+              <div className="flex gap-2">
+                <Button onClick={() => handleUpdateMedication(editingMedication)}>
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setEditingMedication(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
