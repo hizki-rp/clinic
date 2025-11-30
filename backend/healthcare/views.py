@@ -15,11 +15,12 @@ from .models import (
 )
 from .serializers import (
     PatientSerializer, PatientCreateSerializer, VisitSerializer, VisitCreateSerializer,
-    LabTestSerializer, PrescriptionSerializer, MedicationSerializer, 
+    LabTestSerializer, PrescriptionSerializer, MedicationSerializer,
     AppointmentSerializer, MedicalRecordSerializer, QueuePatientSerializer,
     MedicalHistorySerializer, AllergySerializer, PatientMedicationSerializer,
     StaffProfileSerializer, StaffCreateSerializer, ShiftSerializer, PayrollEntrySerializer, PerformanceReviewSerializer
 )
+from authentication.permissions import IsStaffMember, IsDoctor, IsLaboratory
 
 User = get_user_model()
 
@@ -27,7 +28,7 @@ User = get_user_model()
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access patient records
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['gender', 'priority']
     search_fields = ['user__first_name', 'user__last_name', 'patient_id', 'phone']
@@ -57,7 +58,7 @@ class PatientViewSet(viewsets.ModelViewSet):
 class VisitViewSet(viewsets.ModelViewSet):
     queryset = Visit.objects.all()
     serializer_class = VisitSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access visit records
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['stage', 'patient__priority']
     search_fields = ['patient__user__first_name', 'patient__user__last_name', 'patient__patient_id']
@@ -294,7 +295,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 class MedicalRecordViewSet(viewsets.ModelViewSet):
     queryset = MedicalRecord.objects.all()
     serializer_class = MedicalRecordSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access medical records
     filter_backends = [SearchFilter]
     search_fields = ['patient__user__first_name', 'patient__user__last_name', 'patient__patient_id']
 
@@ -303,7 +304,7 @@ class MedicalRecordViewSet(viewsets.ModelViewSet):
 class MedicalHistoryViewSet(viewsets.ModelViewSet):
     queryset = MedicalHistory.objects.all()
     serializer_class = MedicalHistorySerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access medical history
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['patient', 'condition_type', 'is_active']
     search_fields = ['condition_name', 'description']
@@ -314,7 +315,7 @@ class MedicalHistoryViewSet(viewsets.ModelViewSet):
 class AllergyViewSet(viewsets.ModelViewSet):
     queryset = Allergy.objects.all()
     serializer_class = AllergySerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access allergy records
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['patient', 'allergy_type', 'severity', 'is_active']
     search_fields = ['allergen', 'reaction']
@@ -325,7 +326,7 @@ class AllergyViewSet(viewsets.ModelViewSet):
 class PatientMedicationViewSet(viewsets.ModelViewSet):
     queryset = PatientMedication.objects.all()
     serializer_class = PatientMedicationSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access medication records
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['patient', 'is_active', 'frequency']
     search_fields = ['medication_name', 'dosage']
@@ -337,7 +338,7 @@ class PatientMedicationViewSet(viewsets.ModelViewSet):
 class StaffProfileViewSet(viewsets.ModelViewSet):
     queryset = StaffProfile.objects.all()
     serializer_class = StaffProfileSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access staff profiles
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['employment_status', 'department']
     search_fields = ['user__first_name', 'user__last_name', 'employee_id']
@@ -368,7 +369,7 @@ class StaffProfileViewSet(viewsets.ModelViewSet):
 class ShiftViewSet(viewsets.ModelViewSet):
     queryset = Shift.objects.all()
     serializer_class = ShiftSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access shift schedules
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['staff', 'status']
     search_fields = ['staff__user__first_name', 'staff__user__last_name']
@@ -395,7 +396,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
 class PayrollEntryViewSet(viewsets.ModelViewSet):
     queryset = PayrollEntry.objects.all()
     serializer_class = PayrollEntrySerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access payroll - sensitive salary data!
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['staff']
     search_fields = ['staff__user__first_name', 'staff__user__last_name']
@@ -442,7 +443,7 @@ class PayrollEntryViewSet(viewsets.ModelViewSet):
 class PerformanceReviewViewSet(viewsets.ModelViewSet):
     queryset = PerformanceReview.objects.all()
     serializer_class = PerformanceReviewSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsStaffMember]  # Only staff can access performance reviews
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['staff', 'overall_rating']
     search_fields = ['staff__user__first_name', 'staff__user__last_name']

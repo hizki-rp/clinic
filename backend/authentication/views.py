@@ -94,42 +94,139 @@ def create_patient(request):
 @permission_classes([permissions.IsAuthenticated])
 def dashboard_stats(request):
     """Get dashboard statistics based on user role"""
+    from healthcare.models import Patient, Appointment, LabTest, Prescription, Visit
+    from django.db.models import Q, Count
+    from datetime import date, datetime
+
     user = request.user
-    
+    today = date.today()
+
     if user.is_patient:
         # Patient dashboard stats
-        return Response({
-            'role': 'patient',
-            'upcoming_appointments': 0,  # TODO: Implement appointments
-            'pending_lab_results': 0,    # TODO: Implement lab results
-            'active_prescriptions': 0,   # TODO: Implement prescriptions
-        })
-    
+        try:
+            patient = Patient.objects.get(user=user)
+
+            # Upcoming appointments (scheduled or confirmed, date >= today)
+            upcoming_appointments = Appointment.objects.filter(
+                patient=patient,
+                appointment_date__gte=datetime.combine(today, datetime.min.time()),
+                status__in=['scheduled', 'confirmed']
+            ).count()
+
+            # Pending lab results (tests that are not completed)
+            pending_lab_results = LabTest.objects.filter(
+                visit__patient=patient,
+                status__in=['requested', 'in_progress']
+            ).count()
+
+            # Active prescriptions (not dispensed and still valid)
+            active_prescriptions = Prescription.objects.filter(
+                visit__patient=patient,
+                is_dispensed=False,
+                valid_until__gte=today
+            ).count()
+
+            return Response({
+                'role': 'patient',
+                'upcoming_appointments': upcoming_appointments,
+                'pending_lab_results': pending_lab_results,
+                'active_prescriptions': active_prescriptions,
+            })
+        except Patient.DoesNotExist:
+            return Response({
+                'role': 'patient',
+                'upcoming_appointments': 0,
+                'pending_lab_results': 0,
+                'active_prescriptions': 0,
+                'error': 'Patient profile not found'
+            })
+
     elif user.is_reception:
         # Reception dashboard stats
+        # Today's appointments (all appointments scheduled for today)
+        todays_appointments = Appointment.objects.filter(
+            appointment_date__date=today
+        ).count()
+
+        # Pending registrations (patients registered in last 7 days without visits)
+        from datetime import timedelta
+        week_ago = today - timedelta(days=7)
+        pending_registrations = Patient.objects.filter(
+            created_at__gte=datetime.combine(week_ago, datetime.min.time()),
+            visits__isnull=True
+        ).count()
+
         return Response({
             'role': 'reception',
             'total_patients': User.objects.filter(role='patient').count(),
-            'todays_appointments': 0,    # TODO: Implement appointments
-            'pending_registrations': 0,  # TODO: Implement registrations
+            'todays_appointments': todays_appointments,
+            'pending_registrations': pending_registrations,
         })
-    
+
     elif user.is_doctor:
         # Doctor dashboard stats
+        # Today's appointments assigned to this doctor
+        todays_appointments = Appointment.objects.filter(
+            doctor=user,
+            appointment_date__date=today
+        ).count()
+
+        # Pending consultations (visits assigned to this doctor that are not discharged)
+        pending_consultations = Visit.objects.filter(
+            attending_doctor=user,
+            stage__in=['questioning', 'laboratory_test', 'results_by_doctor']
+        ).count()
+
+        # Patients under care (distinct patients from active visits)
+        patients_under_care = Visit.objects.filter(
+            attending_doctor=user,
+            stage__in=['questioning', 'laboratory_test', 'results_by_doctor']
+        ).values('patient').distinct().count()
+
         return Response({
             'role': 'doctor',
-            'todays_appointments': 0,    # TODO: Implement appointments
-            'pending_consultations': 0,  # TODO: Implement consultations
-            'patients_under_care': 0,    # TODO: Implement patient assignments
+            'todays_appointments': todays_appointments,
+            'pending_consultations': pending_consultations,
+            'patients_under_care': patients_under_care,
         })
-    
+
     elif user.is_laboratory:
         # Laboratory dashboard stats
+        # Pending tests (requested or in progress)
+        pending_tests = LabTest.objects.filter(
+            status__in=['requested', 'in_progress']
+        ).count()
+
+        # Completed today
+        completed_today = LabTest.objects.filter(
+            completed_at__date=today,
+            status='completed'
+        ).count()
+
+        # Urgent tests (not completed with urgent priority)
+        urgent_tests = LabTest.objects.filter(
+            Q(status__in=['requested', 'in_progress']) &
+            Q(visit__patient__priority='urgent')
+        ).count()
+
         return Response({
             'role': 'laboratory',
-            'pending_tests': 0,          # TODO: Implement lab tests
-            'completed_today': 0,        # TODO: Implement lab results
-            'urgent_tests': 0,           # TODO: Implement priority tests
+            'pending_tests': pending_tests,
+            'completed_today': completed_today,
+            'urgent_tests': urgent_tests,
         })
-    
+
+    elif user.is_staff or user.role == 'admin':
+        # Admin/Staff dashboard stats - comprehensive overview
+        from datetime import timedelta
+
+        return Response({
+            'role': user.role,
+            'total_patients': Patient.objects.count(),
+            'total_staff': User.objects.filter(role__in=['reception', 'doctor', 'laboratory', 'staff']).count(),
+            'todays_appointments': Appointment.objects.filter(appointment_date__date=today).count(),
+            'active_visits': Visit.objects.exclude(stage='discharged').count(),
+            'pending_lab_tests': LabTest.objects.filter(status__in=['requested', 'in_progress']).count(),
+        })
+
     return Response({'error': 'Invalid role'}, status=status.HTTP_400_BAD_REQUEST)
