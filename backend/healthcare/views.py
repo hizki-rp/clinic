@@ -28,13 +28,24 @@ User = get_user_model()
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
-    permission_classes = [IsStaffMember]  # Only staff can access patient records
+    permission_classes = [permissions.IsAuthenticated]  # Allow authenticated users, filter in get_queryset
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['gender', 'priority']
     search_fields = ['user__first_name', 'user__last_name', 'patient_id', 'phone']
     ordering_fields = ['created_at', 'user__first_name']
     ordering = ['-created_at']
-    
+
+    def get_queryset(self):
+        """Filter queryset based on user role"""
+        user = self.request.user
+        if user.is_staff_member:
+            # Staff can see all patients
+            return Patient.objects.all()
+        elif user.is_patient:
+            # Patients can only see themselves
+            return Patient.objects.filter(user=user)
+        return Patient.objects.none()
+
     def get_serializer_class(self):
         if self.action == 'create':
             return PatientCreateSerializer
@@ -58,13 +69,28 @@ class PatientViewSet(viewsets.ModelViewSet):
 class VisitViewSet(viewsets.ModelViewSet):
     queryset = Visit.objects.all()
     serializer_class = VisitSerializer
-    permission_classes = [IsStaffMember]  # Only staff can access visit records
+    permission_classes = [permissions.IsAuthenticated]  # Authenticated users with filtered access
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['stage', 'patient__priority']
     search_fields = ['patient__user__first_name', 'patient__user__last_name', 'patient__patient_id']
     ordering_fields = ['check_in_time', 'updated_at']
     ordering = ['-check_in_time']
-    
+
+    def get_queryset(self):
+        """Filter queryset based on user role"""
+        user = self.request.user
+        if user.is_staff_member:
+            # Staff can see all visits
+            return Visit.objects.all()
+        elif user.is_patient:
+            # Patients can only see their own visits
+            try:
+                patient = Patient.objects.get(user=user)
+                return Visit.objects.filter(patient=patient)
+            except Patient.DoesNotExist:
+                return Visit.objects.none()
+        return Visit.objects.none()
+
     def get_serializer_class(self):
         if self.action == 'create':
             return VisitCreateSerializer
@@ -295,43 +321,95 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 class MedicalRecordViewSet(viewsets.ModelViewSet):
     queryset = MedicalRecord.objects.all()
     serializer_class = MedicalRecordSerializer
-    permission_classes = [IsStaffMember]  # Only staff can access medical records
+    permission_classes = [permissions.IsAuthenticated]  # Authenticated with filtered access
     filter_backends = [SearchFilter]
     search_fields = ['patient__user__first_name', 'patient__user__last_name', 'patient__patient_id']
+
+    def get_queryset(self):
+        """Filter based on user role"""
+        user = self.request.user
+        if user.is_staff_member:
+            return MedicalRecord.objects.all()
+        elif user.is_patient:
+            try:
+                patient = Patient.objects.get(user=user)
+                return MedicalRecord.objects.filter(patient=patient)
+            except Patient.DoesNotExist:
+                return MedicalRecord.objects.none()
+        return MedicalRecord.objects.none()
 
 
 # EHR ViewSets
 class MedicalHistoryViewSet(viewsets.ModelViewSet):
     queryset = MedicalHistory.objects.all()
     serializer_class = MedicalHistorySerializer
-    permission_classes = [IsStaffMember]  # Only staff can access medical history
+    permission_classes = [permissions.IsAuthenticated]  # Authenticated with filtered access
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['patient', 'condition_type', 'is_active']
     search_fields = ['condition_name', 'description']
     ordering_fields = ['diagnosis_date', 'created_at']
     ordering = ['-diagnosis_date']
 
+    def get_queryset(self):
+        """Filter based on user role"""
+        user = self.request.user
+        if user.is_staff_member:
+            return MedicalHistory.objects.all()
+        elif user.is_patient:
+            try:
+                patient = Patient.objects.get(user=user)
+                return MedicalHistory.objects.filter(patient=patient)
+            except Patient.DoesNotExist:
+                return MedicalHistory.objects.none()
+        return MedicalHistory.objects.none()
+
 
 class AllergyViewSet(viewsets.ModelViewSet):
     queryset = Allergy.objects.all()
     serializer_class = AllergySerializer
-    permission_classes = [IsStaffMember]  # Only staff can access allergy records
+    permission_classes = [permissions.IsAuthenticated]  # Only staff can access allergy records
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['patient', 'allergy_type', 'severity', 'is_active']
     search_fields = ['allergen', 'reaction']
     ordering_fields = ['diagnosed_date', 'severity']
     ordering = ['-severity', '-diagnosed_date']
 
+    def get_queryset(self):
+        """Filter based on user role"""
+        user = self.request.user
+        if user.is_staff_member:
+            return Allergy.objects.all()
+        elif user.is_patient:
+            try:
+                patient = Patient.objects.get(user=user)
+                return Allergy.objects.filter(patient=patient)
+            except Patient.DoesNotExist:
+                return Allergy.objects.none()
+        return Allergy.objects.none()
+
 
 class PatientMedicationViewSet(viewsets.ModelViewSet):
     queryset = PatientMedication.objects.all()
     serializer_class = PatientMedicationSerializer
-    permission_classes = [IsStaffMember]  # Only staff can access medication records
+    permission_classes = [permissions.IsAuthenticated]  # Authenticated with filtered access
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['patient', 'is_active', 'frequency']
     search_fields = ['medication_name', 'dosage']
     ordering_fields = ['start_date', 'created_at']
     ordering = ['-start_date']
+
+    def get_queryset(self):
+        """Filter based on user role"""
+        user = self.request.user
+        if user.is_staff_member:
+            return PatientMedication.objects.all()
+        elif user.is_patient:
+            try:
+                patient = Patient.objects.get(user=user)
+                return PatientMedication.objects.filter(patient=patient)
+            except Patient.DoesNotExist:
+                return PatientMedication.objects.none()
+        return PatientMedication.objects.none()
 
 
 # Staff Management ViewSets
