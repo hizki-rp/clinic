@@ -106,7 +106,7 @@ const StaffManagement = () => {
   // Fetch staff data
   const fetchStaff = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/staff_management/');
+      const response = await fetch(`${API_BASE_URL}/healthcare/admin/staff_management/`);
       if (response.ok) {
         const data = await response.json();
         setStaff(data.staff);
@@ -119,7 +119,7 @@ const StaffManagement = () => {
   // Fetch shifts
   const fetchShifts = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/shift_management/');
+      const response = await fetch(`${API_BASE_URL}/healthcare/admin/shift_management/`);
       if (response.ok) {
         const data = await response.json();
         setShifts(data.shifts);
@@ -132,7 +132,7 @@ const StaffManagement = () => {
   // Fetch payroll
   const fetchPayroll = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/payroll_management/');
+      const response = await fetch(`${API_BASE_URL}/healthcare/admin/payroll_management/`);
       if (response.ok) {
         const data = await response.json();
         setPayrollEntries(data.payroll_entries);
@@ -171,7 +171,7 @@ const StaffManagement = () => {
 
       console.log('Sending staff data:', staffData);
 
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/create_staff/', {
+      const response = await fetch(`${API_BASE_URL}/healthcare/admin/create_staff/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -262,7 +262,7 @@ const StaffManagement = () => {
   // Create new shift
   const createShift = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/create_shift/', {
+      const response = await fetch(`${API_BASE_URL}/healthcare/admin/create_shift/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -363,7 +363,7 @@ const StaffManagement = () => {
       startDate.setDate(1);
       const endDate = new Date();
       
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/generate_payroll/', {
+      const response = await fetch(`${API_BASE_URL}/healthcare/admin/generate_payroll/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

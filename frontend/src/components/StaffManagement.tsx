@@ -65,7 +65,7 @@ const StaffManagement: React.FC = () => {
 
   const fetchStaff = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/staff/');
+      const response = await fetch(`${API_BASE_URL}/healthcare/staff/`);
       if (response.ok) {
         const data = await response.json();
         // Transform backend data to match component expectations
@@ -122,7 +122,7 @@ const StaffManagement: React.FC = () => {
         }
       } else {
         // Create new staff using onboard endpoint
-        const response = await fetch(`${API_BASE_URL}/healthcare/staff/onboard/', {
+        const response = await fetch(`${API_BASE_URL}/healthcare/staff/onboard/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

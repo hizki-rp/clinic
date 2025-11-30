@@ -32,7 +32,7 @@ const AddStaffForm: React.FC<AddStaffFormProps> = ({ onStaffAdded }) => {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/staff/onboard/', {
+      const response = await fetch(`${API_BASE_URL}/healthcare/staff/onboard/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

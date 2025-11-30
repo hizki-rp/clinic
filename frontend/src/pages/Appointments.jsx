@@ -64,7 +64,7 @@ const Appointments = () => {
   const fetchDoctors = async () => {
     try {
       // Use the authentication API endpoint for doctors
-      const response = await fetch(`${API_BASE_URL}/auth/doctors/', {
+      const response = await fetch(`${API_BASE_URL}/auth/doctors/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json',

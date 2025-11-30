@@ -68,9 +68,9 @@ const EHRManagement: React.FC = () => {
     try {
       setLoading(true);
       const [medicalHistoryRes, allergiesRes, medicationsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/healthcare/medical-history/'),
-        fetch(`${API_BASE_URL}/healthcare/allergies/'),
-        fetch(`${API_BASE_URL}/healthcare/patient-medications/')
+        fetch(`${API_BASE_URL}/healthcare/medical-history/`),
+        fetch(`${API_BASE_URL}/healthcare/allergies/`),
+        fetch(`${API_BASE_URL}/healthcare/patient-medications/`)
       ]);
 
       const [medicalHistoryData, allergiesData, medicationsData] = await Promise.all([
