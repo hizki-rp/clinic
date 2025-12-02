@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_BASE_URL } from '@/lib/constants';
+import { healthcareApi } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,16 +72,10 @@ const EHRManagement: React.FC = () => {
   const fetchEHRData = async () => {
     try {
       setLoading(true);
-      const [medicalHistoryRes, allergiesRes, medicationsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/healthcare/medical-history/`),
-        fetch(`${API_BASE_URL}/healthcare/allergies/`),
-        fetch(`${API_BASE_URL}/healthcare/patient-medications/`)
-      ]);
-
       const [medicalHistoryData, allergiesData, medicationsData] = await Promise.all([
-        medicalHistoryRes.json(),
-        allergiesRes.json(),
-        medicationsRes.json()
+        healthcareApi.medicalHistory.list(),
+        healthcareApi.allergies.list(),
+        healthcareApi.patientMedications.list()
       ]);
 
       setMedicalHistories(medicalHistoryData);
@@ -99,16 +93,9 @@ const EHRManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this medical history record?')) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/medical-history/${id}/`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setMedicalHistories(medicalHistories.filter(h => h.id !== id));
-        alert('Medical history deleted successfully');
-      } else {
-        alert('Failed to delete medical history');
-      }
+      await healthcareApi.medicalHistory.delete(id.toString());
+      setMedicalHistories(medicalHistories.filter(h => h.id !== id));
+      alert('Medical history deleted successfully');
     } catch (error) {
       console.error('Error deleting medical history:', error);
       alert('An error occurred while deleting');
@@ -119,16 +106,9 @@ const EHRManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this allergy record?')) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/allergies/${id}/`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setAllergies(allergies.filter(a => a.id !== id));
-        alert('Allergy deleted successfully');
-      } else {
-        alert('Failed to delete allergy');
-      }
+      await healthcareApi.allergies.delete(id.toString());
+      setAllergies(allergies.filter(a => a.id !== id));
+      alert('Allergy deleted successfully');
     } catch (error) {
       console.error('Error deleting allergy:', error);
       alert('An error occurred while deleting');
@@ -139,16 +119,9 @@ const EHRManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this medication record?')) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/patient-medications/${id}/`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setMedications(medications.filter(m => m.id !== id));
-        alert('Medication deleted successfully');
-      } else {
-        alert('Failed to delete medication');
-      }
+      await healthcareApi.patientMedications.delete(id.toString());
+      setMedications(medications.filter(m => m.id !== id));
+      alert('Medication deleted successfully');
     } catch (error) {
       console.error('Error deleting medication:', error);
       alert('An error occurred while deleting');
@@ -158,20 +131,10 @@ const EHRManagement: React.FC = () => {
   // Update handlers
   const handleUpdateHistory = async (updatedHistory: MedicalHistory) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/medical-history/${updatedHistory.id}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedHistory),
-      });
-
-      if (response.ok) {
-        const updated = await response.json();
-        setMedicalHistories(medicalHistories.map(h => h.id === updated.id ? updated : h));
-        setEditingHistory(null);
-        alert('Medical history updated successfully');
-      } else {
-        alert('Failed to update medical history');
-      }
+      const updated = await healthcareApi.medicalHistory.update(updatedHistory.id.toString(), updatedHistory);
+      setMedicalHistories(medicalHistories.map(h => h.id === updated.id ? updated : h));
+      setEditingHistory(null);
+      alert('Medical history updated successfully');
     } catch (error) {
       console.error('Error updating medical history:', error);
       alert('An error occurred while updating');
@@ -180,20 +143,10 @@ const EHRManagement: React.FC = () => {
 
   const handleUpdateAllergy = async (updatedAllergy: Allergy) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/allergies/${updatedAllergy.id}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedAllergy),
-      });
-
-      if (response.ok) {
-        const updated = await response.json();
-        setAllergies(allergies.map(a => a.id === updated.id ? updated : a));
-        setEditingAllergy(null);
-        alert('Allergy updated successfully');
-      } else {
-        alert('Failed to update allergy');
-      }
+      const updated = await healthcareApi.allergies.update(updatedAllergy.id.toString(), updatedAllergy);
+      setAllergies(allergies.map(a => a.id === updated.id ? updated : a));
+      setEditingAllergy(null);
+      alert('Allergy updated successfully');
     } catch (error) {
       console.error('Error updating allergy:', error);
       alert('An error occurred while updating');
@@ -202,20 +155,10 @@ const EHRManagement: React.FC = () => {
 
   const handleUpdateMedication = async (updatedMedication: PatientMedication) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/patient-medications/${updatedMedication.id}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedMedication),
-      });
-
-      if (response.ok) {
-        const updated = await response.json();
-        setMedications(medications.map(m => m.id === updated.id ? updated : m));
-        setEditingMedication(null);
-        alert('Medication updated successfully');
-      } else {
-        alert('Failed to update medication');
-      }
+      const updated = await healthcareApi.patientMedications.update(updatedMedication.id.toString(), updatedMedication);
+      setMedications(medications.map(m => m.id === updated.id ? updated : m));
+      setEditingMedication(null);
+      alert('Medication updated successfully');
     } catch (error) {
       console.error('Error updating medication:', error);
       alert('An error occurred while updating');

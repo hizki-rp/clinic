@@ -28,7 +28,7 @@ User = get_user_model()
 
 class AdminDashboardViewSet(viewsets.ViewSet):
     """Comprehensive admin dashboard with all clinic management features"""
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     
     @action(detail=False, methods=['get'])
     def overview_stats(self, request):
@@ -486,7 +486,7 @@ class AdminDashboardViewSet(viewsets.ViewSet):
 
 
 @api_view(['GET'])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAuthenticated])
 def admin_reports(request):
     """Generate comprehensive admin reports"""
     report_type = request.query_params.get('type', 'overview')

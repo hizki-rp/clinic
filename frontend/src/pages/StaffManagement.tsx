@@ -21,7 +21,7 @@ import {
   Plus,
   Building
 } from 'lucide-react';
-import { API_BASE_URL } from '@/lib/constants';
+import apiClient from '@/lib/api';
 
 interface Staff {
   id: number;
@@ -106,11 +106,8 @@ const StaffManagement = () => {
   // Fetch staff data
   const fetchStaff = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/staff_management/`);
-      if (response.ok) {
-        const data = await response.json();
-        setStaff(data.staff);
-      }
+      const data = await apiClient.get<any>('/healthcare/admin/staff_management/');
+      setStaff(data.staff);
     } catch (error) {
       console.error('Error fetching staff:', error);
     }
@@ -119,11 +116,8 @@ const StaffManagement = () => {
   // Fetch shifts
   const fetchShifts = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/shift_management/`);
-      if (response.ok) {
-        const data = await response.json();
-        setShifts(data.shifts);
-      }
+      const data = await apiClient.get<any>('/healthcare/admin/shift_management/');
+      setShifts(data.shifts);
     } catch (error) {
       console.error('Error fetching shifts:', error);
     }
@@ -132,11 +126,8 @@ const StaffManagement = () => {
   // Fetch payroll
   const fetchPayroll = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/payroll_management/`);
-      if (response.ok) {
-        const data = await response.json();
-        setPayrollEntries(data.payroll_entries);
-      }
+      const data = await apiClient.get<any>('/healthcare/admin/payroll_management/');
+      setPayrollEntries(data.payroll_entries);
     } catch (error) {
       console.error('Error fetching payroll:', error);
     }
@@ -171,16 +162,9 @@ const StaffManagement = () => {
 
       console.log('Sending staff data:', staffData);
 
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/create_staff/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(staffData)
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
+      const data = await apiClient.post<any>('/healthcare/admin/create_staff/', staffData);
+
+      if (data) {
         toast({
           title: 'Staff Created Successfully!',
           description: `Employee ID: ${data.employee_id}, Temporary Password: ${data.temporary_password}`,
@@ -196,7 +180,7 @@ const StaffManagement = () => {
           employee_id: data.employee_id
         });
         localStorage.setItem('createdStaff', JSON.stringify(storedStaff));
-        
+
         setCreatedCredentials({
           employee_id: data.employee_id,
           email: newStaffForm.email,
@@ -215,39 +199,6 @@ const StaffManagement = () => {
           license_number: ''
         });
         fetchStaff();
-      } else {
-        // Even if backend fails, store credentials for mock login
-        const storedStaff = JSON.parse(localStorage.getItem('createdStaff') || '[]');
-        storedStaff.push({
-          first_name: newStaffForm.first_name,
-          last_name: newStaffForm.last_name,
-          email: newStaffForm.email,
-          password: newStaffForm.password,
-          role: newStaffForm.role,
-          employee_id: `EMP-${Date.now()}`
-        });
-        localStorage.setItem('createdStaff', JSON.stringify(storedStaff));
-        
-        const errorData = await response.json();
-        console.error('API Error:', response.status, errorData);
-        
-        let errorMessage = 'Backend creation failed, but credentials saved for login.';
-        if (errorData.error?.includes('UNIQUE constraint failed: authentication_user.username')) {
-          errorMessage = 'User exists in backend, but credentials saved for login.';
-        } else if (errorData.error) {
-          errorMessage = errorData.error + ' (Credentials saved for login)';
-        }
-        
-        toast({
-          title: 'Staff Credentials Saved',
-          description: errorMessage,
-        });
-        
-        setCreatedCredentials({
-          employee_id: `EMP-${Date.now()}`,
-          email: newStaffForm.email,
-          password: newStaffForm.password
-        });
       }
     } catch (error) {
       console.error('Error creating staff:', error);
@@ -262,40 +213,24 @@ const StaffManagement = () => {
   // Create new shift
   const createShift = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/create_shift/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newShiftForm)
+      await apiClient.post<any>('/healthcare/admin/create_shift/', newShiftForm);
+      toast({
+        title: 'Shift Created Successfully!',
+        description: 'New shift has been scheduled.',
       });
-      
-      if (response.ok) {
-        toast({
-          title: 'Shift Created Successfully!',
-          description: 'New shift has been scheduled.',
-        });
-        setNewShiftForm({
-          staff_id: '',
-          start_time: '',
-          end_time: '',
-          notes: ''
-        });
-        fetchShifts();
-      } else {
-        const errorData = await response.json();
-        toast({
-          variant: 'destructive',
-          title: 'Failed to Create Shift',
-          description: errorData.message || 'An error occurred while creating the shift.',
-        });
-      }
-    } catch (error) {
+      setNewShiftForm({
+        staff_id: '',
+        start_time: '',
+        end_time: '',
+        notes: ''
+      });
+      fetchShifts();
+    } catch (error: any) {
       console.error('Error creating shift:', error);
       toast({
         variant: 'destructive',
-        title: 'Network Error',
-        description: 'Unable to connect to the server. Please try again.',
+        title: 'Failed to Create Shift',
+        description: error.message || 'An error occurred while creating the shift.',
       });
     }
   };
@@ -324,34 +259,18 @@ const StaffManagement = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/update_staff_role/${staffId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: newRole })
+      await apiClient.patch<any>(`/healthcare/admin/update_staff_role/${staffId}/`, { role: newRole });
+      toast({
+        title: 'Role Updated Successfully',
+        description: 'Staff member role has been updated.',
       });
-      
-      if (response.ok) {
-        toast({
-          title: 'Role Updated Successfully',
-          description: 'Staff member role has been updated.',
-        });
-        fetchStaff();
-      } else {
-        const errorData = await response.json();
-        toast({
-          variant: 'destructive',
-          title: 'Failed to Update Role',
-          description: errorData.message || 'An error occurred while updating the role.',
-        });
-      }
-    } catch (error) {
+      fetchStaff();
+    } catch (error: any) {
       console.error('Error updating staff role:', error);
       toast({
         variant: 'destructive',
-        title: 'Network Error',
-        description: 'Unable to connect to the server. Please try again.',
+        title: 'Failed to Update Role',
+        description: error.message || 'An error occurred while updating the role.',
       });
     }
   };
@@ -362,39 +281,23 @@ const StaffManagement = () => {
       const startDate = new Date();
       startDate.setDate(1);
       const endDate = new Date();
-      
-      const response = await fetch(`${API_BASE_URL}/healthcare/admin/generate_payroll/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate.toISOString().split('T')[0]
-        })
+
+      const data = await apiClient.post<any>('/healthcare/admin/generate_payroll/', {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0]
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        toast({
-          title: 'Payroll Generated Successfully!',
-          description: `Generated ${data.created_entries} payroll entries.`,
-        });
-        fetchPayroll();
-      } else {
-        const errorData = await response.json();
-        toast({
-          variant: 'destructive',
-          title: 'Failed to Generate Payroll',
-          description: errorData.message || 'An error occurred while generating payroll.',
-        });
-      }
-    } catch (error) {
+
+      toast({
+        title: 'Payroll Generated Successfully!',
+        description: `Generated ${data.created_entries} payroll entries.`,
+      });
+      fetchPayroll();
+    } catch (error: any) {
       console.error('Error generating payroll:', error);
       toast({
         variant: 'destructive',
-        title: 'Network Error',
-        description: 'Unable to connect to the server. Please try again.',
+        title: 'Failed to Generate Payroll',
+        description: error.message || 'An error occurred while generating payroll.',
       });
     }
   };
