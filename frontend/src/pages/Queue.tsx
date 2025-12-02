@@ -36,8 +36,10 @@ const getRelevantStages = (userRole: string): QueueStage[] => {
   switch(userRole) {
     case 'reception':
       return ['Waiting Room']; // Reception only sees waiting room
+    case 'triage':
+    case 'nurse':
     case 'staff': // Triage/Nurse role
-      return ['Triage']; // Nurses only see triage
+      return ['Triage']; // Nurses/Triage only see triage
     case 'doctor':
       return ['Questioning', 'Results by Doctor']; // Doctors see questioning and discharge
     case 'laboratory':
@@ -54,10 +56,18 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
   const { movePatient } = usePatientQueue();
   const { user } = useAuth();
   const role = user?.role || '';
+  const [isTriageModalOpen, setTriageModalOpen] = useState(false);
   const [isQuestioningModalOpen, setQuestioningModalOpen] = useState(false);
   const [isLabModalOpen, setLabModalOpen] = useState(false);
   const [isDoctorModalOpen, setDoctorModalOpen] = useState(false);
 
+  const [vitalSigns, setVitalSigns] = useState({
+    height: '',
+    weight: '',
+    bloodPressure: '',
+    temperature: '',
+  });
+  const [triageNotes, setTriageNotes] = useState('');
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [labResults, setLabResults] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
@@ -70,7 +80,7 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
         if(role === 'reception') movePatient(patient.id, 'Triage');
         break;
       case 'Triage':
-        if(role === 'staff') setQuestioningModalOpen(true); // Nurse completes triage
+        if(role === 'triage' || role === 'staff') setTriageModalOpen(true); // Triage/Nurse completes triage
         break;
       case 'Questioning':
         if(role === 'doctor') setQuestioningModalOpen(true);
@@ -82,6 +92,14 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
         if(role === 'doctor') setDoctorModalOpen(true);
         break;
     }
+  };
+
+  const handleCompleteTriage = () => {
+    const vitalSignsData = `Height: ${vitalSigns.height}, Weight: ${vitalSigns.weight}, BP: ${vitalSigns.bloodPressure}, Temp: ${vitalSigns.temperature}`;
+    movePatient(patient.id, 'Questioning', { vitalSigns: vitalSignsData, triageNotes });
+    setTriageModalOpen(false);
+    setVitalSigns({ height: '', weight: '', bloodPressure: '', temperature: '' });
+    setTriageNotes('');
   };
 
   const handleSendToLab = () => {
@@ -122,7 +140,7 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
       case 'Triage':
         text = 'Complete Triage';
         icon = <Activity className="mr-2 h-4 w-4" />;
-        isVisible = role === 'staff'; // Nurse
+        isVisible = role === 'triage' || role === 'staff'; // Triage/Nurse
         variant = "default";
         break;
       case 'Questioning':
@@ -277,8 +295,91 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
 
         {/* Action button */}
         {getActionButton()}
-        
+
         {/* Modals */}
+        <AlertDialog open={isTriageModalOpen} onOpenChange={setTriageModalOpen}>
+            <AlertDialogContent className="max-w-lg">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Triage Assessment - {patient.name}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Record vital signs and triage notes for this patient.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="height" className="text-sm font-medium">Height (cm)</Label>
+                            <input
+                                id="height"
+                                type="number"
+                                value={vitalSigns.height}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, height: e.target.value }))}
+                                placeholder="e.g., 170"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="weight" className="text-sm font-medium">Weight (kg)</Label>
+                            <input
+                                id="weight"
+                                type="number"
+                                value={vitalSigns.weight}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, weight: e.target.value }))}
+                                placeholder="e.g., 70"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="bloodPressure" className="text-sm font-medium">Blood Pressure</Label>
+                            <input
+                                id="bloodPressure"
+                                type="text"
+                                value={vitalSigns.bloodPressure}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, bloodPressure: e.target.value }))}
+                                placeholder="e.g., 120/80"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="temperature" className="text-sm font-medium">Temperature (°C)</Label>
+                            <input
+                                id="temperature"
+                                type="number"
+                                step="0.1"
+                                value={vitalSigns.temperature}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, temperature: e.target.value }))}
+                                placeholder="e.g., 37.0"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="triage-notes" className="text-sm font-medium">Triage Notes</Label>
+                        <Textarea
+                            id="triage-notes"
+                            value={triageNotes}
+                            onChange={e => setTriageNotes(e.target.value)}
+                            placeholder="Enter any observations, concerns, or notes from triage assessment..."
+                            className="min-h-[100px] resize-none"
+                        />
+                    </div>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleCompleteTriage}
+                      disabled={!vitalSigns.height || !vitalSigns.weight || !vitalSigns.bloodPressure || !vitalSigns.temperature}
+                      className="bg-teal-600 hover:bg-teal-700"
+                    >
+                      Complete Triage
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
         <AlertDialog open={isQuestioningModalOpen} onOpenChange={setQuestioningModalOpen}>
             <AlertDialogContent className="max-w-md">
                 <AlertDialogHeader>
@@ -533,6 +634,8 @@ export default function ClinicQueueManager() {
   const getRoleDisplayName = (role: string) => {
     switch(role) {
       case 'reception': return 'Reception';
+      case 'triage': return 'Triage';
+      case 'nurse': return 'Nurse';
       case 'staff': return 'Triage Nurse';
       case 'doctor': return 'Doctor';
       case 'laboratory': return 'Laboratory';
