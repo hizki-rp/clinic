@@ -108,55 +108,41 @@ class VisitViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Role-based access control for stage transitions
-        # Reception can only move to waiting_room
-        if user.is_reception and new_stage not in ['waiting_room']:
-            return Response(
-                {'error': 'Receptionists can only check patients into the waiting room'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # Triage/Nurse can only handle triage stage
-        if (user.is_triage or user.is_nurse) and new_stage not in ['triage', 'waiting_room']:
-            return Response(
-                {'error': 'Triage/Nurse staff can only perform triage assessments'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # Laboratory can only handle lab results
-        if user.is_laboratory and new_stage not in ['laboratory_test', 'results_by_doctor']:
-            return Response(
-                {'error': 'Laboratory staff can only handle lab tests'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # All authenticated staff can move patients through stages (queue coordination)
+        # But only specific roles can add medical data during transitions
 
         visit.stage = new_stage
 
-        # Handle Triage phase - ONLY triage/nurse staff can add vitals
+        # Handle Triage phase - ONLY triage/nurse/doctor can add vitals
         if new_stage == 'triage':
-            if not (user.is_triage or user.is_nurse or user.is_doctor or user.is_admin):
-                return Response(
-                    {'error': 'Only triage/nurse staff can perform triage'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            if 'vitalSigns' in request.data:
-                visit.vital_signs = request.data['vitalSigns']
-            if 'triageNotes' in request.data:
-                visit.triage_notes = request.data['triageNotes']
-            visit.triage_completed_by = user
-            visit.triage_completed_at = timezone.now()
+            # Check if user is trying to add medical data
+            if 'vitalSigns' in request.data or 'triageNotes' in request.data:
+                if not (user.is_triage or user.is_nurse or user.is_doctor or user.is_admin):
+                    return Response(
+                        {'error': 'Only triage/nurse staff can add vital signs and triage notes'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                # User has permission to add medical data
+                if 'vitalSigns' in request.data:
+                    visit.vital_signs = request.data['vitalSigns']
+                if 'triageNotes' in request.data:
+                    visit.triage_notes = request.data['triageNotes']
+                visit.triage_completed_by = user
+                visit.triage_completed_at = timezone.now()
 
-        # Handle Questioning phase - ONLY doctors
+        # Handle Questioning phase - ONLY doctors can add consultation findings
         if new_stage == 'questioning':
-            if not (user.is_doctor or user.is_admin):
-                return Response(
-                    {'error': 'Only doctors can perform consultations'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            # Check if user is trying to add medical data
             if 'questioningFindings' in request.data:
+                if not (user.is_doctor or user.is_admin):
+                    return Response(
+                        {'error': 'Only doctors can add consultation findings'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                # User has permission to add medical data
                 visit.questioning_findings = request.data['questioningFindings']
-            visit.questioning_completed_at = timezone.now()
-            visit.attending_doctor = user
+                visit.questioning_completed_at = timezone.now()
+                visit.attending_doctor = user
 
         # Handle Laboratory phase - ONLY doctors can REQUEST lab tests
         if new_stage == 'laboratory_test':
@@ -175,35 +161,40 @@ class VisitViewSet(viewsets.ModelViewSet):
                         requested_by=user
                     )
         
-        # Handle Results by Doctor phase - Doctors review lab results
+        # Handle Results by Doctor phase - ONLY doctors can add lab findings
         if new_stage == 'results_by_doctor':
-            if not (user.is_doctor or user.is_admin):
-                return Response(
-                    {'error': 'Only doctors can review lab results and provide findings'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            # Check if user is trying to add medical data
             if 'labFindings' in request.data:
+                if not (user.is_doctor or user.is_admin):
+                    return Response(
+                        {'error': 'Only doctors can add lab findings and interpretations'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                # User has permission to add medical data
                 visit.lab_findings = request.data['labFindings']
-            visit.lab_completed_at = timezone.now()
+                visit.lab_completed_at = timezone.now()
 
             # Note: Lab tests are marked as completed by laboratory staff in LabTestViewSet
             # Doctors only review and interpret results here
 
-        # Handle Discharge phase - ONLY doctors can discharge and prescribe
+        # Handle Discharge phase - ONLY doctors can add diagnosis/treatment/prescriptions
         if new_stage == 'discharged':
-            if not (user.is_doctor or user.is_admin):
-                return Response(
-                    {'error': 'Only doctors can discharge patients and write prescriptions'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
             visit.discharge_time = timezone.now()
 
-            if 'diagnosis' in request.data:
-                visit.diagnosis = request.data['diagnosis']
-            if 'treatment_plan' in request.data:
-                visit.treatment_plan = request.data['treatment_plan']
-            if 'finalFindings' in request.data:
-                visit.final_findings = request.data['finalFindings']
+            # Check if user is trying to add medical data (diagnosis, treatment, prescriptions)
+            if 'diagnosis' in request.data or 'treatment_plan' in request.data or 'finalFindings' in request.data or 'prescription' in request.data:
+                if not (user.is_doctor or user.is_admin):
+                    return Response(
+                        {'error': 'Only doctors can add diagnosis, treatment plans, and prescriptions'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+                # User has permission to add medical data
+                if 'diagnosis' in request.data:
+                    visit.diagnosis = request.data['diagnosis']
+                if 'treatment_plan' in request.data:
+                    visit.treatment_plan = request.data['treatment_plan']
+                if 'finalFindings' in request.data:
+                    visit.final_findings = request.data['finalFindings']
 
             # Handle prescription - ONLY doctors
             if 'prescription' in request.data:
