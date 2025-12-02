@@ -23,6 +23,8 @@ export interface Patient {
 }
 
 interface PatientDataUpdate {
+  vitalSigns?: string;
+  triageNotes?: string;
   requestedLabTests?: string[];
   labResults?: string;
   diagnosis?: string;
