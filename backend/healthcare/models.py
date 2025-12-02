@@ -469,7 +469,7 @@ class PerformanceReview(models.Model):
         (4, 'Above Average'),
         (5, 'Excellent'),
     ]
-    
+
     staff = models.ForeignKey(StaffProfile, on_delete=models.CASCADE, related_name='performance_reviews')
     reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     review_period_start = models.DateField()
@@ -480,9 +480,140 @@ class PerformanceReview(models.Model):
     goals = models.TextField(blank=True)
     comments = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-review_period_end']
-    
+
     def __str__(self):
         return f"{self.staff.user.get_full_name()} - {self.review_period_end} (Rating: {self.overall_rating})"
+
+
+class MedicationAdministration(models.Model):
+    """Track medications administered to patients at the clinic"""
+    ADMINISTRATION_ROUTE_CHOICES = [
+        ('oral', 'Oral'),
+        ('intramuscular', 'Intramuscular (IM)'),
+        ('intravenous', 'Intravenous (IV)'),
+        ('subcutaneous', 'Subcutaneous (SC)'),
+        ('topical', 'Topical'),
+        ('inhalation', 'Inhalation'),
+        ('rectal', 'Rectal'),
+        ('other', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('administered', 'Administered'),
+        ('refused', 'Refused'),
+        ('held', 'Held'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    visit = models.ForeignKey(Visit, on_delete=models.CASCADE, related_name='administered_medications')
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='medication_administrations')
+
+    # Medication details
+    medication_name = models.CharField(max_length=200)
+    dosage = models.CharField(max_length=100)  # e.g., "500mg", "10ml"
+    route = models.CharField(max_length=20, choices=ADMINISTRATION_ROUTE_CHOICES)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='scheduled')
+
+    # Administration details
+    ordered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='ordered_medications',
+        limit_choices_to={'role__in': ['doctor', 'admin']}
+    )
+    administered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='administered_medications',
+        limit_choices_to={'role__in': ['nurse', 'triage', 'doctor', 'staff']}
+    )
+
+    # Timing
+    scheduled_time = models.DateTimeField()
+    administered_time = models.DateTimeField(null=True, blank=True)
+
+    # For injections
+    injection_site = models.CharField(max_length=100, null=True, blank=True)  # e.g., "Left deltoid", "Right thigh"
+
+    # For IV
+    iv_line_location = models.CharField(max_length=100, null=True, blank=True)
+    flow_rate = models.CharField(max_length=50, null=True, blank=True)  # e.g., "100 ml/hr"
+
+    # Batch/lot tracking
+    batch_number = models.CharField(max_length=50, null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+
+    # Patient response
+    patient_response = models.TextField(null=True, blank=True)  # Normal, adverse reaction, etc.
+    adverse_reaction = models.BooleanField(default=False)
+    adverse_reaction_details = models.TextField(null=True, blank=True)
+
+    # Monitoring
+    requires_observation = models.BooleanField(default=False)
+    observation_duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+    observation_completed = models.BooleanField(default=False)
+
+    # Documentation
+    notes = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.medication_name} - {self.patient.user.get_full_name()} ({self.administered_time or 'Scheduled'})"
+
+    class Meta:
+        ordering = ['-administered_time', '-scheduled_time']
+
+
+class Immunization(models.Model):
+    """Track patient immunizations/vaccinations"""
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='immunizations')
+
+    # Vaccine details
+    vaccine_name = models.CharField(max_length=200)
+    vaccine_type = models.CharField(max_length=100)  # e.g., "COVID-19", "Influenza", "MMR"
+    dose_number = models.PositiveIntegerField(help_text="Which dose in the series (1, 2, 3, etc.)")
+    total_doses_required = models.PositiveIntegerField(default=1)
+
+    # Administration
+    administered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='administered_immunizations'
+    )
+    administered_date = models.DateField()
+    administration_site = models.CharField(max_length=100)  # e.g., "Left deltoid"
+
+    # Vaccine tracking
+    manufacturer = models.CharField(max_length=100)
+    lot_number = models.CharField(max_length=50)
+    expiry_date = models.DateField()
+
+    # Next dose
+    next_dose_due = models.DateField(null=True, blank=True)
+
+    # Reaction tracking
+    adverse_reaction = models.BooleanField(default=False)
+    reaction_details = models.TextField(null=True, blank=True)
+
+    # Documentation
+    vaccine_certificate_generated = models.BooleanField(default=False)
+    notes = models.TextField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.vaccine_name} - {self.patient.user.get_full_name()} (Dose {self.dose_number})"
+
+    class Meta:
+        ordering = ['-administered_date']

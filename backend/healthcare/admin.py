@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Patient, Visit, LabTest, Prescription, Medication, Appointment, MedicalRecord,
-    MedicalHistory, Allergy, PatientMedication, StaffProfile, Shift, PayrollEntry, PerformanceReview
+    MedicalHistory, Allergy, PatientMedication, StaffProfile, Shift, PayrollEntry, PerformanceReview,
+    MedicationAdministration, Immunization
 )
 
 # Custom admin site configuration
@@ -117,6 +118,84 @@ class PerformanceReviewAdmin(admin.ModelAdmin):
     list_filter = ['overall_rating', 'review_period_end']
     search_fields = ['staff__user__first_name', 'staff__user__last_name']
     date_hierarchy = 'review_period_end'
-    
+
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('staff__user', 'reviewer')
+
+
+# ============ MEDICATION ADMINISTRATION SECTION ============
+@admin.register(MedicationAdministration)
+class MedicationAdministrationAdmin(admin.ModelAdmin):
+    list_display = ['patient', 'medication_name', 'dosage', 'route', 'status', 'administered_time', 'administered_by']
+    list_filter = ['status', 'route', 'administered_time', 'adverse_reaction', 'requires_observation']
+    search_fields = ['patient__user__first_name', 'patient__user__last_name', 'medication_name']
+    date_hierarchy = 'administered_time'
+
+    fieldsets = (
+        ('Patient & Visit', {
+            'fields': ('visit', 'patient')
+        }),
+        ('Medication Details', {
+            'fields': ('medication_name', 'dosage', 'route', 'status')
+        }),
+        ('Administration', {
+            'fields': ('ordered_by', 'administered_by', 'scheduled_time', 'administered_time')
+        }),
+        ('Injection/IV Details', {
+            'fields': ('injection_site', 'iv_line_location', 'flow_rate'),
+            'classes': ('collapse',)
+        }),
+        ('Batch Tracking', {
+            'fields': ('batch_number', 'expiry_date'),
+            'classes': ('collapse',)
+        }),
+        ('Patient Response', {
+            'fields': ('patient_response', 'adverse_reaction', 'adverse_reaction_details')
+        }),
+        ('Observation', {
+            'fields': ('requires_observation', 'observation_duration_minutes', 'observation_completed')
+        }),
+        ('Notes', {
+            'fields': ('notes',)
+        }),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'patient__user', 'visit', 'ordered_by', 'administered_by'
+        )
+
+
+@admin.register(Immunization)
+class ImmunizationAdmin(admin.ModelAdmin):
+    list_display = ['patient', 'vaccine_name', 'dose_number', 'total_doses_required', 'administered_date', 'next_dose_due']
+    list_filter = ['vaccine_type', 'administered_date', 'adverse_reaction', 'vaccine_certificate_generated']
+    search_fields = ['patient__user__first_name', 'patient__user__last_name', 'vaccine_name']
+    date_hierarchy = 'administered_date'
+
+    fieldsets = (
+        ('Patient', {
+            'fields': ('patient',)
+        }),
+        ('Vaccine Details', {
+            'fields': ('vaccine_name', 'vaccine_type', 'dose_number', 'total_doses_required')
+        }),
+        ('Administration', {
+            'fields': ('administered_by', 'administered_date', 'administration_site')
+        }),
+        ('Vaccine Tracking', {
+            'fields': ('manufacturer', 'lot_number', 'expiry_date')
+        }),
+        ('Follow-up', {
+            'fields': ('next_dose_due',)
+        }),
+        ('Reaction', {
+            'fields': ('adverse_reaction', 'reaction_details')
+        }),
+        ('Documentation', {
+            'fields': ('vaccine_certificate_generated', 'notes')
+        }),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('patient__user', 'administered_by')
