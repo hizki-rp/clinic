@@ -6,6 +6,8 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ('patient', 'Patient'),
         ('reception', 'Reception'),
+        ('triage', 'Triage'),
+        ('nurse', 'Nurse'),
         ('doctor', 'Doctor'),
         ('laboratory', 'Laboratory'),
         ('staff', 'Staff'),
@@ -42,19 +44,27 @@ class User(AbstractUser):
     @property
     def is_reception(self):
         return self.role == 'reception'
-    
+
+    @property
+    def is_triage(self):
+        return self.role == 'triage'
+
+    @property
+    def is_nurse(self):
+        return self.role == 'nurse'
+
     @property
     def is_doctor(self):
         return self.role == 'doctor'
-    
+
     @property
     def is_laboratory(self):
         return self.role == 'laboratory'
-    
+
     @property
     def is_staff_member(self):
-        return self.role in ['reception', 'doctor', 'laboratory', 'staff']
-    
+        return self.role in ['reception', 'triage', 'nurse', 'doctor', 'laboratory', 'staff', 'admin']
+
     @property
     def is_admin(self):
         return self.role == 'admin'

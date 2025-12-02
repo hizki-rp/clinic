@@ -11,6 +11,16 @@ class IsReception(permissions.BasePermission):
         return request.user.is_authenticated and request.user.is_reception
 
 
+class IsTriage(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_triage
+
+
+class IsNurse(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_nurse
+
+
 class IsDoctor(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.is_doctor

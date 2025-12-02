@@ -100,73 +100,112 @@ class VisitViewSet(viewsets.ModelViewSet):
     def move_to_stage(self, request, pk=None):
         visit = self.get_object()
         new_stage = request.data.get('stage')
-        
+        user = request.user
+
         if new_stage not in dict(Visit.STAGE_CHOICES):
             return Response(
-                {'error': 'Invalid stage'}, 
+                {'error': 'Invalid stage'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        # Role-based access control for stage transitions
+        # Reception can only move to waiting_room
+        if user.is_reception and new_stage not in ['waiting_room']:
+            return Response(
+                {'error': 'Receptionists can only check patients into the waiting room'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Triage/Nurse can only handle triage stage
+        if (user.is_triage or user.is_nurse) and new_stage not in ['triage', 'waiting_room']:
+            return Response(
+                {'error': 'Triage/Nurse staff can only perform triage assessments'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Laboratory can only handle lab results
+        if user.is_laboratory and new_stage not in ['laboratory_test', 'results_by_doctor']:
+            return Response(
+                {'error': 'Laboratory staff can only handle lab tests'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         visit.stage = new_stage
-        
-        # Handle Triage phase
+
+        # Handle Triage phase - ONLY triage/nurse staff can add vitals
         if new_stage == 'triage':
+            if not (user.is_triage or user.is_nurse or user.is_doctor or user.is_admin):
+                return Response(
+                    {'error': 'Only triage/nurse staff can perform triage'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             if 'vitalSigns' in request.data:
                 visit.vital_signs = request.data['vitalSigns']
             if 'triageNotes' in request.data:
                 visit.triage_notes = request.data['triageNotes']
-            if request.user.is_authenticated:
-                visit.triage_completed_by = request.user
+            visit.triage_completed_by = user
             visit.triage_completed_at = timezone.now()
-        
-        # Handle Questioning phase
+
+        # Handle Questioning phase - ONLY doctors
         if new_stage == 'questioning':
+            if not (user.is_doctor or user.is_admin):
+                return Response(
+                    {'error': 'Only doctors can perform consultations'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             if 'questioningFindings' in request.data:
                 visit.questioning_findings = request.data['questioningFindings']
             visit.questioning_completed_at = timezone.now()
-            if request.user.is_authenticated and request.user.role == 'doctor':
-                visit.attending_doctor = request.user
-        
-        # Handle Laboratory phase
+            visit.attending_doctor = user
+
+        # Handle Laboratory phase - ONLY doctors can REQUEST lab tests
         if new_stage == 'laboratory_test':
             if 'requestedLabTests' in request.data:
+                if not (user.is_doctor or user.is_admin):
+                    return Response(
+                        {'error': 'Only doctors can request lab tests'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
                 requested_tests = request.data['requestedLabTests']
                 for test_name in requested_tests:
                     LabTest.objects.create(
                         visit=visit,
                         test_name=test_name,
                         test_type=test_name,
-                        requested_by=request.user if request.user.is_authenticated else None
+                        requested_by=user
                     )
         
-        # Handle Results by Doctor phase
+        # Handle Results by Doctor phase - Doctors review lab results
         if new_stage == 'results_by_doctor':
+            if not (user.is_doctor or user.is_admin):
+                return Response(
+                    {'error': 'Only doctors can review lab results and provide findings'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             if 'labFindings' in request.data:
                 visit.lab_findings = request.data['labFindings']
             visit.lab_completed_at = timezone.now()
-            
-            # Mark lab tests as completed
-            if 'labResults' in request.data:
-                lab_results = request.data['labResults']
-                for test in visit.lab_tests.filter(status='requested'):
-                    test.results = lab_results
-                    test.status = 'completed'
-                    test.completed_at = timezone.now()
-                    test.performed_by = request.user if request.user.is_authenticated else None
-                    test.save()
-        
-        # Handle Discharge phase
+
+            # Note: Lab tests are marked as completed by laboratory staff in LabTestViewSet
+            # Doctors only review and interpret results here
+
+        # Handle Discharge phase - ONLY doctors can discharge and prescribe
         if new_stage == 'discharged':
+            if not (user.is_doctor or user.is_admin):
+                return Response(
+                    {'error': 'Only doctors can discharge patients and write prescriptions'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             visit.discharge_time = timezone.now()
-            
+
             if 'diagnosis' in request.data:
                 visit.diagnosis = request.data['diagnosis']
             if 'treatment_plan' in request.data:
                 visit.treatment_plan = request.data['treatment_plan']
             if 'finalFindings' in request.data:
                 visit.final_findings = request.data['finalFindings']
-            
-            # Handle prescription
+
+            # Handle prescription - ONLY doctors
             if 'prescription' in request.data:
                 prescription_text = request.data['prescription']
                 medications = []
@@ -180,11 +219,11 @@ class VisitViewSet(viewsets.ModelViewSet):
                                 'frequency': parts[2],
                                 'duration': parts[3]
                             })
-                
+
                 prescription, created = Prescription.objects.get_or_create(
                     visit=visit,
                     defaults={
-                        'prescribed_by': request.user if request.user.is_authenticated else None,
+                        'prescribed_by': user,
                         'medications': medications
                     }
                 )
@@ -241,6 +280,13 @@ class LabTestViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def complete_test(self, request, pk=None):
+        # Only laboratory staff can complete lab tests
+        if not (request.user.is_laboratory or request.user.is_admin):
+            return Response(
+                {'error': 'Only laboratory staff can complete lab tests'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         test = self.get_object()
         test.results = request.data.get('results', '')
         test.interpretation = request.data.get('interpretation', '')
@@ -248,7 +294,7 @@ class LabTestViewSet(viewsets.ModelViewSet):
         test.completed_at = timezone.now()
         test.performed_by = request.user
         test.save()
-        
+
         serializer = self.get_serializer(test)
         return Response(serializer.data)
 
@@ -265,12 +311,19 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def dispense(self, request, pk=None):
+        # Only staff/nurse can dispense medications (not doctors, they prescribe)
+        if not (request.user.is_staff_member):
+            return Response(
+                {'error': 'Only staff members can dispense medications'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         prescription = self.get_object()
         prescription.is_dispensed = True
         prescription.dispensed_at = timezone.now()
         prescription.dispensed_by = request.data.get('dispensed_by', request.user.get_full_name())
         prescription.save()
-        
+
         serializer = self.get_serializer(prescription)
         return Response(serializer.data)
 
