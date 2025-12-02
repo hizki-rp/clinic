@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 import re
 from .models import (
     Patient, Visit, LabTest, Prescription, Medication, Appointment, MedicalRecord,
-    MedicalHistory, Allergy, PatientMedication, StaffProfile, Shift, PayrollEntry, PerformanceReview
+    MedicalHistory, Allergy, PatientMedication, StaffProfile, Shift, PayrollEntry, PerformanceReview,
+    MedicationAdministration, Immunization
 )
 
 User = get_user_model()
@@ -646,8 +647,227 @@ class PayrollEntrySerializer(serializers.ModelSerializer):
 class PerformanceReviewSerializer(serializers.ModelSerializer):
     staff = StaffProfileSerializer(read_only=True)
     reviewer = UserSerializer(read_only=True)
-    
+
     class Meta:
         model = PerformanceReview
         fields = '__all__'
         read_only_fields = ['created_at']
+
+
+class MedicationAdministrationSerializer(serializers.ModelSerializer):
+    """Serializer for tracking medications administered at the clinic"""
+    patient = PatientSerializer(read_only=True)
+    ordered_by = UserSerializer(read_only=True)
+    administered_by = UserSerializer(read_only=True)
+    patient_name = serializers.SerializerMethodField()
+    visit_id = serializers.PrimaryKeyRelatedField(queryset=Visit.objects.all(), source='visit', write_only=True)
+    patient_id = serializers.PrimaryKeyRelatedField(queryset=Patient.objects.all(), source='patient', write_only=True)
+
+    class Meta:
+        model = MedicationAdministration
+        fields = [
+            'id', 'visit', 'visit_id', 'patient', 'patient_id', 'patient_name',
+            'medication_name', 'dosage', 'route', 'status',
+            'ordered_by', 'administered_by', 'scheduled_time', 'administered_time',
+            'injection_site', 'iv_line_location', 'flow_rate',
+            'batch_number', 'expiry_date',
+            'patient_response', 'adverse_reaction', 'adverse_reaction_details',
+            'requires_observation', 'observation_duration_minutes', 'observation_completed',
+            'notes', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+    def get_patient_name(self, obj):
+        return obj.patient.user.get_full_name()
+
+    def validate(self, data):
+        """Validate medication administration data"""
+        # If status is 'administered', administered_time and administered_by must be set
+        if data.get('status') == 'administered':
+            if not data.get('administered_time'):
+                raise serializers.ValidationError({
+                    'administered_time': 'Administration time is required when status is "administered".'
+                })
+            if not data.get('administered_by') and not self.instance:
+                # For create operations, we'll set this from the request user in the view
+                pass
+
+        # If adverse_reaction is True, details must be provided
+        if data.get('adverse_reaction') and not data.get('adverse_reaction_details'):
+            raise serializers.ValidationError({
+                'adverse_reaction_details': 'Details are required when adverse reaction is reported.'
+            })
+
+        # If requires_observation is True, duration must be specified
+        if data.get('requires_observation') and not data.get('observation_duration_minutes'):
+            raise serializers.ValidationError({
+                'observation_duration_minutes': 'Observation duration is required when observation is needed.'
+            })
+
+        # Validate route-specific fields
+        route = data.get('route')
+        if route in ['intramuscular', 'subcutaneous']:
+            if data.get('status') == 'administered' and not data.get('injection_site'):
+                raise serializers.ValidationError({
+                    'injection_site': f'Injection site is required for {route} administration.'
+                })
+
+        if route == 'intravenous':
+            if data.get('status') == 'administered':
+                if not data.get('iv_line_location'):
+                    raise serializers.ValidationError({
+                        'iv_line_location': 'IV line location is required for intravenous administration.'
+                    })
+                if not data.get('flow_rate'):
+                    raise serializers.ValidationError({
+                        'flow_rate': 'Flow rate is required for intravenous administration.'
+                    })
+
+        return data
+
+
+class ImmunizationSerializer(serializers.ModelSerializer):
+    """Serializer for patient immunizations/vaccinations"""
+    patient = PatientSerializer(read_only=True)
+    administered_by = UserSerializer(read_only=True)
+    patient_name = serializers.SerializerMethodField()
+    patient_id = serializers.PrimaryKeyRelatedField(queryset=Patient.objects.all(), source='patient', write_only=True)
+    is_series_complete = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Immunization
+        fields = [
+            'id', 'patient', 'patient_id', 'patient_name',
+            'vaccine_name', 'vaccine_type', 'dose_number', 'total_doses_required', 'is_series_complete',
+            'administered_by', 'administered_date', 'administration_site',
+            'manufacturer', 'lot_number', 'expiry_date',
+            'next_dose_due',
+            'adverse_reaction', 'reaction_details',
+            'vaccine_certificate_generated', 'notes',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+    def get_patient_name(self, obj):
+        return obj.patient.user.get_full_name()
+
+    def get_is_series_complete(self, obj):
+        """Check if the vaccine series is complete"""
+        return obj.dose_number >= obj.total_doses_required
+
+    def validate(self, data):
+        """Validate immunization data"""
+        # Validate dose number
+        dose_number = data.get('dose_number', 1)
+        total_doses = data.get('total_doses_required', 1)
+
+        if dose_number > total_doses:
+            raise serializers.ValidationError({
+                'dose_number': f'Dose number ({dose_number}) cannot exceed total doses required ({total_doses}).'
+            })
+
+        if dose_number < 1:
+            raise serializers.ValidationError({
+                'dose_number': 'Dose number must be at least 1.'
+            })
+
+        # If adverse reaction, details must be provided
+        if data.get('adverse_reaction') and not data.get('reaction_details'):
+            raise serializers.ValidationError({
+                'reaction_details': 'Reaction details are required when adverse reaction is reported.'
+            })
+
+        # Validate expiry date is in the future
+        expiry_date = data.get('expiry_date')
+        if expiry_date and expiry_date < datetime.now().date():
+            raise serializers.ValidationError({
+                'expiry_date': 'Cannot administer expired vaccine. Expiry date must be in the future.'
+            })
+
+        # If this is not the final dose, suggest next dose due date
+        if dose_number < total_doses and not data.get('next_dose_due'):
+            # Calculate suggested next dose date (typically 4-8 weeks later depending on vaccine)
+            administered_date = data.get('administered_date', datetime.now().date())
+            # This is just a suggestion, can be overridden
+            pass
+
+        return data
+
+
+class PatientSummarySerializer(serializers.ModelSerializer):
+    """Comprehensive patient summary with all related data"""
+    user = UserSerializer(read_only=True)
+    full_name = serializers.SerializerMethodField()
+    visits = serializers.SerializerMethodField()
+    medical_histories = serializers.SerializerMethodField()
+    allergies = serializers.SerializerMethodField()
+    current_medications_list = serializers.SerializerMethodField()
+    immunizations = serializers.SerializerMethodField()
+    recent_prescriptions = serializers.SerializerMethodField()
+    upcoming_appointments = serializers.SerializerMethodField()
+    administered_medications = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Patient
+        fields = [
+            'id', 'user', 'patient_id', 'full_name', 'age', 'gender', 'phone', 'address',
+            'medical_history', 'allergies', 'current_medications',
+            'emergency_contact_name', 'emergency_contact_phone',
+            'insurance_provider', 'insurance_policy_number', 'priority',
+            'visits', 'medical_histories', 'allergies', 'current_medications_list',
+            'immunizations', 'recent_prescriptions', 'upcoming_appointments',
+            'administered_medications',
+            'created_at', 'updated_at'
+        ]
+
+    def get_full_name(self, obj):
+        return obj.user.get_full_name()
+
+    def get_visits(self, obj):
+        """Get recent visits (last 10)"""
+        from .serializers import VisitSerializer  # Import here to avoid circular import
+        visits = obj.visits.all()[:10]
+        return VisitSerializer(visits, many=True).data
+
+    def get_medical_histories(self, obj):
+        """Get active medical conditions"""
+        histories = obj.medical_histories.filter(is_active=True)
+        return MedicalHistorySerializer(histories, many=True).data
+
+    def get_allergies(self, obj):
+        """Get active allergies"""
+        allergies = obj.patient_allergies.filter(is_active=True)
+        return AllergySerializer(allergies, many=True).data
+
+    def get_current_medications_list(self, obj):
+        """Get current active medications"""
+        medications = obj.patient_medications.filter(is_active=True)
+        return PatientMedicationSerializer(medications, many=True).data
+
+    def get_immunizations(self, obj):
+        """Get all immunizations"""
+        immunizations = obj.immunizations.all()[:20]
+        return ImmunizationSerializer(immunizations, many=True).data
+
+    def get_recent_prescriptions(self, obj):
+        """Get recent prescriptions (last 5)"""
+        visits = obj.visits.all()[:5]
+        prescriptions = []
+        for visit in visits:
+            if hasattr(visit, 'prescription'):
+                prescriptions.append(visit.prescription)
+        return PrescriptionSerializer(prescriptions, many=True).data
+
+    def get_upcoming_appointments(self, obj):
+        """Get upcoming appointments"""
+        from django.utils import timezone
+        appointments = obj.appointments.filter(
+            appointment_date__gte=timezone.now(),
+            status__in=['scheduled', 'confirmed']
+        )[:5]
+        return AppointmentSerializer(appointments, many=True).data
+
+    def get_administered_medications(self, obj):
+        """Get recent administered medications (last 10)"""
+        meds = obj.medication_administrations.all()[:10]
+        return MedicationAdministrationSerializer(meds, many=True).data
