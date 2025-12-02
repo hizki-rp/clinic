@@ -33,11 +33,14 @@ class ApiClient {
     try {
       const response = await fetch(url, config);
       
-      // Handle 401 Unauthorized errors specifically, as suggested
+      // Handle 401 Unauthorized errors - redirect to login
       if (response.status === 401) {
-        console.error('Authentication required. Consider redirecting to login.');
-        // Optional: Redirect to login page or dispatch a logout action
-        // window.location.href = '/login'; 
+        console.error('Authentication required. Redirecting to login...');
+        // Clear invalid tokens
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        // Redirect to login page
+        window.location.href = '/login';
         throw new Error('401: Authentication credentials were not provided.');
       }
 
