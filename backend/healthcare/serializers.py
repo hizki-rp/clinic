@@ -48,13 +48,7 @@ class PatientCreateSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(
         max_length=20,
         required=False,
-        allow_blank=True,
-        validators=[
-            RegexValidator(
-                regex=r'^\+?1?\d{9,15}$',
-                message='Phone number must be entered in the format: "+999999999". Up to 15 digits allowed.'
-            )
-        ]
+        allow_blank=True
     )
     age = serializers.IntegerField(
         required=False,
@@ -80,6 +74,17 @@ class PatientCreateSerializer(serializers.ModelSerializer):
         """Ensure username is unique"""
         if value and User.objects.filter(username=value).exists():
             raise serializers.ValidationError("A user with this username already exists.")
+        return value
+
+    def validate_phone(self, value):
+        """Validate phone format, but allow blank/empty values"""
+        if not value or value == '':
+            return value
+        # Only validate format if a value is provided
+        if not re.match(r'^\+?1?\d{9,15}$', value):
+            raise serializers.ValidationError(
+                'Phone number must be entered in the format: "+999999999". Up to 15 digits allowed.'
+            )
         return value
 
     def validate_emergency_contact_phone(self, value):
