@@ -99,32 +99,50 @@ export const PatientQueueProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   // Load queue data from backend
-  const refreshQueue = async () => {
+  const refreshQueue = async (silent = false) => {
     try {
-      setLoading(true);
+      // Only show loading spinner on initial load, not on auto-refresh
+      if (!silent) {
+        setLoading(true);
+      }
       setError(null);
-      
+
       // Get current queue (active patients)
       const queueData = await healthcareApi.visits.getQueue();
       const transformedQueue = queueData.map(transformPatientData);
       setPatients(transformedQueue);
-      
+
       // Get all patients (including discharged)
       const allPatientsData = await healthcareApi.visits.getAllPatients();
       const transformedAllPatients = allPatientsData.map(transformPatientData);
       setAllPatients(transformedAllPatients);
-      
+
     } catch (err) {
       console.error('Failed to load queue data:', err);
-      setError('Failed to load patient data');
+      // Only show error on initial load, silently fail on auto-refresh
+      if (!silent) {
+        setError('Failed to load patient data');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
   // Load data on mount
   useEffect(() => {
     refreshQueue();
+  }, []);
+
+  // Auto-refresh queue every 10 seconds
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      refreshQueue(true); // Silent refresh - no loading spinner
+    }, 10000); // 10 seconds
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const addPatient = async (patientData: { 

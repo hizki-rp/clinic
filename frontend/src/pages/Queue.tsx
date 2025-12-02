@@ -80,7 +80,9 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
         if(role === 'reception') movePatient(patient.id, 'Triage');
         break;
       case 'Triage':
-        if(role === 'triage' || role === 'staff') setTriageModalOpen(true); // Triage/Nurse completes triage
+        if(role === 'triage' || role === 'nurse' || role === 'staff' || role === 'doctor' || role === 'admin') {
+          setTriageModalOpen(true); // Authorized staff completes triage
+        }
         break;
       case 'Questioning':
         if(role === 'doctor') setQuestioningModalOpen(true);
@@ -140,7 +142,7 @@ const PatientCard = ({ patient }: { patient: Patient }) => {
       case 'Triage':
         text = 'Complete Triage';
         icon = <Activity className="mr-2 h-4 w-4" />;
-        isVisible = role === 'triage' || role === 'staff'; // Triage/Nurse
+        isVisible = role === 'triage' || role === 'nurse' || role === 'staff' || role === 'doctor' || role === 'admin';
         variant = "default";
         break;
       case 'Questioning':
