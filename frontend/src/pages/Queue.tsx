@@ -1,0 +1,1035 @@
+'use client';
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import '../styles/queue-enhancements.css';
+import { ArrowRight, User, Stethoscope, ClipboardPlus, Printer, Plus, UserCheck, TestTube, LogOut, FileText, AlertTriangle, CheckCircle2, Clock, Phone, MapPin, Calendar, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { usePatientQueue, type Patient, type QueueStage } from '@/context/PatientQueueContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
+import { Badge } from '@/components/ui/badge';
+
+const STAGES: QueueStage[] = ['Waiting Room', 'Triage', 'Questioning', 'Laboratory Test', 'Results by Doctor'];
+
+// Role-based stage filtering - Clean and simple
+const getRelevantStages = (userRole: string): QueueStage[] => {
+  switch(userRole) {
+    case 'reception':
+      return ['Waiting Room']; // Reception only sees waiting room
+    case 'triage':
+    case 'nurse':
+    case 'staff': // Triage/Nurse role
+      return ['Triage']; // Nurses/Triage only see triage
+    case 'doctor':
+      return ['Questioning', 'Results by Doctor']; // Doctors see questioning and discharge
+    case 'laboratory':
+      return ['Laboratory Test']; // Lab only sees lab tests
+    case 'admin':
+      return STAGES; // Admin sees all for management
+    default:
+      return [];
+  }
+};
+const AVAILABLE_LAB_TESTS = ["Complete Blood Count (CBC)", "Urinalysis", "Blood Glucose", "Lipid Panel", "Liver Function Test"];
+
+// Helper component to display triage data
+const TriageDataCard = ({ patient, onMovePatient }: { patient: Patient; onMovePatient?: (patientId: string, stage: QueueStage) => void }) => {
+  // Parse vital signs - handle both string and object formats
+  let vitalSignsData: any = {};
+  
+  if (patient.vitalSigns) {
+    if (typeof patient.vitalSigns === 'string') {
+      try {
+        vitalSignsData = JSON.parse(patient.vitalSigns);
+      } catch {
+        // If parsing fails, it might be in old format
+        vitalSignsData = {};
+      }
+    } else {
+      vitalSignsData = patient.vitalSigns;
+    }
+  }
+
+  // More robust check for triage data - check for any vital sign values
+  const hasTriageData = vitalSignsData && (
+    vitalSignsData.height || 
+    vitalSignsData.weight || 
+    vitalSignsData.bloodPressure || 
+    vitalSignsData.temperature || 
+    vitalSignsData.pulse || 
+    vitalSignsData.respiratoryRate || 
+    vitalSignsData.oxygenSaturation ||
+    Object.keys(vitalSignsData).length > 0
+  );
+
+  if (!hasTriageData) {
+    return (
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center flex-shrink-0">
+            <Activity className="h-4 w-4 text-blue-600 dark:text-blue-300" />
+          </div>
+          <div>
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">No Triage Data Available</h4>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+              This patient did not complete triage assessment. You can either complete triage now or proceed with examination.
+            </p>
+            <div className="flex gap-2">
+              {onMovePatient && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                  onClick={() => {
+                    // Move patient back to triage stage
+                    onMovePatient(patient.id, 'Triage');
+                  }}
+                >
+                  Complete Triage First
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+      <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+        <Activity className="h-4 w-4" />
+        Triage Vital Signs
+      </h4>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        {vitalSignsData.height && (
+          <div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">Height:</span>
+            <span className="ml-2 text-blue-900 dark:text-blue-100">{vitalSignsData.height} cm</span>
+          </div>
+        )}
+        {vitalSignsData.weight && (
+          <div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">Weight:</span>
+            <span className="ml-2 text-blue-900 dark:text-blue-100">{vitalSignsData.weight} kg</span>
+          </div>
+        )}
+        {vitalSignsData.bloodPressure && (
+          <div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">BP:</span>
+            <span className="ml-2 text-blue-900 dark:text-blue-100">{vitalSignsData.bloodPressure} mmHg</span>
+          </div>
+        )}
+        {vitalSignsData.temperature && (
+          <div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">Temp:</span>
+            <span className="ml-2 text-blue-900 dark:text-blue-100">{vitalSignsData.temperature}°C</span>
+          </div>
+        )}
+        {vitalSignsData.pulse && (
+          <div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">Pulse:</span>
+            <span className="ml-2 text-blue-900 dark:text-blue-100">{vitalSignsData.pulse} bpm</span>
+          </div>
+        )}
+        {vitalSignsData.respiratoryRate && (
+          <div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">Resp. Rate:</span>
+            <span className="ml-2 text-blue-900 dark:text-blue-100">{vitalSignsData.respiratoryRate}/min</span>
+          </div>
+        )}
+        {vitalSignsData.oxygenSaturation && (
+          <div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">SpO2:</span>
+            <span className="ml-2 text-blue-900 dark:text-blue-100">{vitalSignsData.oxygenSaturation}%</span>
+          </div>
+        )}
+        {vitalSignsData.bmi && (
+          <div>
+            <span className="text-blue-700 dark:text-blue-300 font-medium">BMI:</span>
+            <span className="ml-2 text-blue-900 dark:text-blue-100">{vitalSignsData.bmi}</span>
+          </div>
+        )}
+      </div>
+      {patient.triageNotes && (
+        <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+          <span className="text-blue-700 dark:text-blue-300 font-medium text-sm">Notes:</span>
+          <p className="text-blue-900 dark:text-blue-100 text-sm mt-1">{patient.triageNotes}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PatientCard = ({ patient }: { patient: Patient }) => {
+  const { movePatient } = usePatientQueue();
+  const { user } = useAuth();
+  const role = user?.role || '';
+  const [isTriageModalOpen, setTriageModalOpen] = useState(false);
+  const [isQuestioningModalOpen, setQuestioningModalOpen] = useState(false);
+  const [isLabModalOpen, setLabModalOpen] = useState(false);
+  const [isDoctorModalOpen, setDoctorModalOpen] = useState(false);
+
+  const [vitalSigns, setVitalSigns] = useState({
+    height: '',
+    weight: '',
+    bloodPressure: '',
+    temperature: '',
+    pulse: '',
+    respiratoryRate: '',
+    oxygenSaturation: '',
+  });
+  const [triageNotes, setTriageNotes] = useState('');
+  const [questioningFindings, setQuestioningFindings] = useState('');
+  const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const [labResults, setLabResults] = useState('');
+  const [diagnosis, setDiagnosis] = useState('');
+  const [prescription, setPrescription] = useState('');
+  const navigate = useNavigate();
+
+  const handleTestAction = () => {
+    switch (patient.stage) {
+      case 'Waiting Room':
+        if(role === 'reception') movePatient(patient.id, 'Triage');
+        break;
+      case 'Triage':
+        if(role === 'triage' || role === 'nurse' || role === 'staff' || role === 'doctor' || role === 'admin') {
+          setTriageModalOpen(true); // Authorized staff completes triage
+        }
+        break;
+      case 'Questioning':
+        if(role === 'doctor') setQuestioningModalOpen(true);
+        break;
+      case 'Laboratory Test':
+        if(role === 'laboratory') setLabModalOpen(true);
+        break;
+      case 'Results by Doctor':
+        if(role === 'doctor') setDoctorModalOpen(true);
+        break;
+    }
+  };
+
+  const handleCompleteTriage = () => {
+    // Calculate BMI
+    const heightInMeters = parseFloat(vitalSigns.height) / 100;
+    const weightInKg = parseFloat(vitalSigns.weight);
+    const bmi = (weightInKg / (heightInMeters * heightInMeters)).toFixed(1);
+    
+    // Create vital signs object with all 7 measurements plus BMI
+    const vitalSignsObject = {
+      height: vitalSigns.height,
+      weight: vitalSigns.weight,
+      bloodPressure: vitalSigns.bloodPressure,
+      temperature: vitalSigns.temperature,
+      pulse: vitalSigns.pulse,
+      respiratoryRate: vitalSigns.respiratoryRate,
+      oxygenSaturation: vitalSigns.oxygenSaturation,
+      bmi: bmi
+    };
+    
+    movePatient(patient.id, 'Questioning', { vitalSigns: JSON.stringify(vitalSignsObject), triageNotes });
+    setTriageModalOpen(false);
+    setVitalSigns({ 
+      height: '', 
+      weight: '', 
+      bloodPressure: '', 
+      temperature: '', 
+      pulse: '', 
+      respiratoryRate: '', 
+      oxygenSaturation: '' 
+    });
+    setTriageNotes('');
+  };
+
+  const handleSendToLab = () => {
+    movePatient(patient.id, 'Laboratory Test', { 
+      questioningFindings,
+      requestedLabTests: selectedTests 
+    });
+    setQuestioningModalOpen(false);
+    setQuestioningFindings('');
+    setSelectedTests([]);
+  }
+
+  const handleSkipLab = () => {
+    // Move directly to Results by Doctor stage without lab tests
+    movePatient(patient.id, 'Results by Doctor', { 
+      questioningFindings 
+    });
+    setQuestioningModalOpen(false);
+    setQuestioningFindings('');
+    setSelectedTests([]);
+  }
+
+  const handleAddLabResults = () => {
+    movePatient(patient.id, 'Results by Doctor', { labResults });
+    setLabModalOpen(false);
+    setLabResults('');
+  }
+
+  const handleDischarge = () => {
+    movePatient(patient.id, 'Discharged', { diagnosis, prescription });
+    setDoctorModalOpen(false);
+    navigate(`/patients/${patient.id}/prescription`);
+  }
+  
+  const handlePrint = () => {
+    navigate(`/patients/${patient.id}/summary`);
+  }
+
+  const getActionButton = () => {
+    let text = '';
+    let icon: React.ReactNode = <ArrowRight className="ml-2 h-4 w-4" />;
+    let isVisible = false;
+    let variant: "default" | "outline" | "secondary" | "destructive" | "ghost" | "link" = "default";
+
+    switch (patient.stage) {
+      case 'Waiting Room':
+        text = 'Move to Triage';
+        icon = <UserCheck className="mr-2 h-4 w-4" />
+        isVisible = role === 'reception';
+        variant = "default";
+        break;
+      case 'Triage':
+        text = 'Complete Triage';
+        icon = <Activity className="mr-2 h-4 w-4" />;
+        isVisible = role === 'triage' || role === 'nurse' || role === 'staff' || role === 'doctor' || role === 'admin';
+        variant = "default";
+        break;
+      case 'Questioning':
+        text = 'Assign Lab Tests';
+        icon = <Stethoscope className="mr-2 h-4 w-4" />;
+        isVisible = role === 'doctor';
+        variant = "default";
+        break;
+      case 'Laboratory Test':
+        text = 'Add Lab Results';
+        icon = <TestTube className="mr-2 h-4 w-4" />;
+        isVisible = role === 'laboratory';
+        variant = "default";
+        break;
+      case 'Results by Doctor':
+        text = 'Diagnose & Discharge';
+        icon = <LogOut className="mr-2 h-4 w-4" />;
+        isVisible = role === 'doctor';
+        variant = "default";
+        break;
+    }
+
+    if (!isVisible) return null;
+
+    return (
+        <Button 
+          size="sm" 
+          variant={variant} 
+          onClick={handleTestAction} 
+          className="w-full mt-4 transition-all duration-200 hover:scale-105 shadow-sm"
+        >
+            {icon} {text}
+        </Button>
+    )
+  };
+
+  const getWaitingTime = () => {
+    const now = new Date();
+    const checkIn = new Date(patient.checkInTime);
+    const diffMs = now.getTime() - checkIn.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    
+    if (diffMins < 60) {
+      return `${diffMins}m`;
+    } else {
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      return `${hours}h ${mins}m`;
+    }
+  };
+
+  return (
+    <Card className={cn(
+      "group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1",
+      "bg-gradient-to-br from-card to-card/80 backdrop-blur-sm",
+      "border-l-4 border-r border-t border-b",
+      patient.priority === 'Urgent' 
+        ? 'border-l-red-500 shadow-red-100 dark:shadow-red-900/20' 
+        : 'border-l-blue-500 shadow-blue-100 dark:shadow-blue-900/20'
+    )}>
+      <CardContent className="p-4 space-y-4">
+        {/* Header with name and priority */}
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-bold text-lg text-foreground truncate">{patient.name}</h3>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="text-xs">
+                ID: {patient.id}
+              </Badge>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{getWaitingTime()}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col items-end gap-2">
+            {patient.priority === 'Urgent' ? (
+              <Badge variant="destructive" className="flex items-center gap-1 text-xs font-bold">
+                <AlertTriangle className="h-3 w-3" />
+                URGENT
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                <CheckCircle2 className="h-3 w-3" />
+                Standard
+              </Badge>
+            )}
+            
+            {/* New Results Badge for Results by Doctor stage */}
+            {patient.stage === 'Results by Doctor' && (
+              <Badge variant="default" className="flex items-center gap-1 text-xs font-bold bg-green-600 hover:bg-green-700">
+                <Activity className="h-3 w-3" />
+                New Results
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Patient details */}
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="h-4 w-4 flex-shrink-0" />
+            <span>Checked in: {new Date(patient.checkInTime).toLocaleTimeString([], { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}</span>
+          </div>
+          
+          {patient.phone && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Phone className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{patient.phone}</span>
+            </div>
+          )}
+          
+          {patient.address && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{patient.address}</span>
+            </div>
+          )}
+
+          {patient.age && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <User className="h-4 w-4 flex-shrink-0" />
+              <span>{patient.age} years old • {patient.sex || 'Not specified'}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Lab tests and results */}
+        {patient.requestedLabTests && patient.requestedLabTests.length > 0 && (
+          <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <TestTube className="h-4 w-4" />
+              <span>Lab Tests</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {patient.requestedLabTests.map((test, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  {test}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {patient.labResults && (
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-300">
+              <Activity className="h-4 w-4" />
+              <span>Lab Results Available</span>
+            </div>
+            <p className="text-xs text-green-600 dark:text-green-400 line-clamp-2">
+              {patient.labResults}
+            </p>
+          </div>
+        )}
+
+        {/* Action button */}
+        {getActionButton()}
+
+        {/* Modals */}
+        <AlertDialog open={isTriageModalOpen} onOpenChange={setTriageModalOpen}>
+            <AlertDialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Triage Assessment - {patient.name}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Record vital signs and triage notes for this patient.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-6 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="height" className="text-sm font-medium">Height (cm)</Label>
+                            <input
+                                id="height"
+                                type="number"
+                                value={vitalSigns.height}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, height: e.target.value }))}
+                                placeholder="e.g., 170"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="weight" className="text-sm font-medium">Weight (kg)</Label>
+                            <input
+                                id="weight"
+                                type="number"
+                                value={vitalSigns.weight}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, weight: e.target.value }))}
+                                placeholder="e.g., 70"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="bloodPressure" className="text-sm font-medium">Blood Pressure (mmHg)</Label>
+                            <input
+                                id="bloodPressure"
+                                type="text"
+                                value={vitalSigns.bloodPressure}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, bloodPressure: e.target.value }))}
+                                placeholder="e.g., 120/80"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                            <p className="text-xs text-muted-foreground">Normal: 90-120/60-80 mmHg</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="temperature" className="text-sm font-medium">Temperature (°C)</Label>
+                            <input
+                                id="temperature"
+                                type="number"
+                                step="0.1"
+                                value={vitalSigns.temperature}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, temperature: e.target.value }))}
+                                placeholder="e.g., 37.0"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                            <p className="text-xs text-muted-foreground">Normal: 36.1-37.2°C</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="pulse" className="text-sm font-medium">Pulse (bpm)</Label>
+                            <input
+                                id="pulse"
+                                type="number"
+                                value={vitalSigns.pulse}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, pulse: e.target.value }))}
+                                placeholder="e.g., 75"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                            <p className="text-xs text-muted-foreground">Normal: 60-100 bpm</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="respiratoryRate" className="text-sm font-medium">Respiratory Rate (/min)</Label>
+                            <input
+                                id="respiratoryRate"
+                                type="number"
+                                value={vitalSigns.respiratoryRate}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, respiratoryRate: e.target.value }))}
+                                placeholder="e.g., 16"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                            <p className="text-xs text-muted-foreground">Normal: 12-20 /min</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="oxygenSaturation" className="text-sm font-medium">Oxygen Saturation (%)</Label>
+                            <input
+                                id="oxygenSaturation"
+                                type="number"
+                                value={vitalSigns.oxygenSaturation}
+                                onChange={e => setVitalSigns(prev => ({ ...prev, oxygenSaturation: e.target.value }))}
+                                placeholder="e.g., 98"
+                                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                            <p className="text-xs text-muted-foreground">Normal: 95-100%</p>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* BMI Display */}
+                        {vitalSigns.height && vitalSigns.weight && (
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                            <div className="text-center">
+                              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Calculated BMI</span>
+                              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+                                {((parseFloat(vitalSigns.weight) / Math.pow(parseFloat(vitalSigns.height) / 100, 2)) || 0).toFixed(1)}
+                              </div>
+                              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                                {(() => {
+                                  const bmi = parseFloat(vitalSigns.weight) / Math.pow(parseFloat(vitalSigns.height) / 100, 2);
+                                  if (bmi < 18.5) return 'Underweight';
+                                  if (bmi < 25) return 'Normal weight';
+                                  if (bmi < 30) return 'Overweight';
+                                  return 'Obese';
+                                })()}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Triage Notes */}
+                        <div className="space-y-2">
+                            <Label htmlFor="triageNotes" className="text-sm font-medium">Triage Notes (Optional)</Label>
+                            <Textarea
+                                id="triageNotes"
+                                value={triageNotes}
+                                onChange={e => setTriageNotes(e.target.value)}
+                                placeholder="Additional observations, patient concerns, or special notes..."
+                                className="min-h-[100px] resize-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleCompleteTriage}
+                      disabled={!vitalSigns.height || !vitalSigns.weight || !vitalSigns.bloodPressure || !vitalSigns.temperature || !vitalSigns.pulse || !vitalSigns.respiratoryRate || !vitalSigns.oxygenSaturation}
+                      className="bg-teal-600 hover:bg-teal-700"
+                    >
+                      Complete Triage
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isQuestioningModalOpen} onOpenChange={setQuestioningModalOpen}>
+            <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <Stethoscope className="h-5 w-5" />
+                      Doctor's Examination - {patient.name}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Review available triage data (if any), record your examination findings, and order lab tests if needed.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-4 py-4">
+                    {/* Triage Data Display */}
+                    <TriageDataCard patient={patient} onMovePatient={movePatient} />
+                    
+                    {(() => {
+                      // Check if patient has triage data for conditional messaging
+                      let vitalSignsData: any = {};
+                      if (patient.vitalSigns) {
+                        if (typeof patient.vitalSigns === 'string') {
+                          try {
+                            vitalSignsData = JSON.parse(patient.vitalSigns);
+                          } catch {
+                            vitalSignsData = {};
+                          }
+                        } else {
+                          vitalSignsData = patient.vitalSigns;
+                        }
+                      }
+                      const hasTriageData = vitalSignsData && Object.keys(vitalSignsData).length > 0;
+                      
+                      return (
+                        <>
+                          {/* Info box when no triage data */}
+                          {!hasTriageData && (
+                            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                              <p className="text-sm text-green-700 dark:text-green-300">
+                                💡 <strong>No triage data available.</strong> Please record your own assessment including any vital signs you take during examination.
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* Questioning Findings */}
+                          <div className="space-y-2">
+                        <Label htmlFor="questioning-findings" className="text-sm font-medium">
+                          Examination Findings *
+                        </Label>
+                        <Textarea
+                            id="questioning-findings"
+                            value={questioningFindings}
+                            onChange={e => setQuestioningFindings(e.target.value)}
+                            placeholder={hasTriageData ? 
+                              "Record symptoms, physical examination results, initial impressions, and clinical reasoning..." :
+                              "Record chief complaint, symptoms, physical examination results, vital signs (if taken), initial impressions, and clinical reasoning..."
+                            }
+                            className="min-h-[120px] resize-none"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {questioningFindings.length} characters
+                          {!hasTriageData && " • Include vital signs if you take them during examination"}
+                        </p>
+                    </div>
+
+                    {/* Lab Tests Selection */}
+                    <div className="space-y-3">
+                        <Label className="text-sm font-medium">Laboratory Tests (Optional)</Label>
+                        <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+                            {AVAILABLE_LAB_TESTS.map(test => (
+                                <div key={test} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50">
+                                    <Checkbox 
+                                        id={`test-${patient.id}-${test}`}
+                                        onCheckedChange={(checked) => {
+                                            setSelectedTests(prev => checked ? [...prev, test] : prev.filter(t => t !== test))
+                                        }}
+                                    />
+                                    <label 
+                                      htmlFor={`test-${patient.id}-${test}`} 
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                    >
+                                        {test}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                        {selectedTests.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedTests.length} test(s) selected
+                          </p>
+                        )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                </div>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <Button
+                      onClick={handleSkipLab}
+                      disabled={!questioningFindings.trim()}
+                      variant="outline"
+                      className="border-green-600 text-green-600 hover:bg-green-50"
+                    >
+                      Skip Lab Tests
+                    </Button>
+                    <AlertDialogAction 
+                      onClick={handleSendToLab} 
+                      disabled={!questioningFindings.trim() || selectedTests.length === 0}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Send to Lab ({selectedTests.length})
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isLabModalOpen} onOpenChange={setLabModalOpen}>
+            <AlertDialogContent className="max-w-lg">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <TestTube className="h-5 w-5" />
+                      Lab Results for {patient.name}
+                    </AlertDialogTitle>
+                </AlertDialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="bg-muted/50 rounded-lg p-3">
+                        <h4 className="font-semibold mb-2 flex items-center gap-2">
+                          <ClipboardPlus className="h-4 w-4" />
+                          Requested Tests:
+                        </h4>
+                        <div className="flex flex-wrap gap-1">
+                          {patient.requestedLabTests?.map((test, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {test}
+                            </Badge>
+                          ))}
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lab-results" className="text-sm font-medium">Test Results</Label>
+                      <Textarea 
+                          id="lab-results" 
+                          value={labResults} 
+                          onChange={e => setLabResults(e.target.value)}
+                          placeholder="Enter detailed lab findings and measurements..."
+                          className="min-h-[120px] resize-none"
+                      />
+                    </div>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleAddLabResults} 
+                      disabled={!labResults.trim()}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      Submit Results
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        
+        <AlertDialog open={isDoctorModalOpen} onOpenChange={setDoctorModalOpen}>
+            <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                <AlertDialogHeader className="flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Final Diagnosis - {patient.name}
+                      </AlertDialogTitle>
+                      <Button variant="ghost" size="icon" onClick={handlePrint} title="Print Summary">
+                          <Printer className="h-4 w-4"/>
+                      </Button>
+                    </div>
+                </AlertDialogHeader>
+                <div className="flex-1 overflow-y-auto space-y-4 py-4">
+                    {/* Triage Data Display */}
+                    <TriageDataCard patient={patient} onMovePatient={movePatient} />
+                    
+                    {/* Questioning Findings Display */}
+                    {patient.questioningFindings && (
+                      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                          <h4 className="font-semibold mb-2 flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                            <Stethoscope className="h-4 w-4" />
+                            Examination Findings:
+                          </h4>
+                          <div className="bg-white dark:bg-gray-800 rounded-md p-3 text-sm whitespace-pre-wrap border">
+                            {patient.questioningFindings}
+                          </div>
+                      </div>
+                    )}
+                    
+                    {patient.labResults && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                          <h4 className="font-semibold mb-2 flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                            <Activity className="h-4 w-4" />
+                            Lab Results:
+                          </h4>
+                          <div className="bg-white dark:bg-gray-800 rounded-md p-3 text-sm whitespace-pre-wrap border">
+                            {patient.labResults}
+                          </div>
+                      </div>
+                    )}
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="diagnosis" className="text-sm font-medium">Final Diagnosis *</Label>
+                        <Textarea 
+                            id="diagnosis" 
+                            value={diagnosis}
+                            onChange={e => setDiagnosis(e.target.value)}
+                            placeholder="Enter the final diagnosis based on examination and lab results..."
+                            className="min-h-[100px] resize-none"
+                        />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="prescription" className="text-sm font-medium">Prescription & Treatment Plan *</Label>
+                        <Textarea 
+                            id="prescription" 
+                            value={prescription}
+                            onChange={e => setPrescription(e.target.value)}
+                            placeholder="e.g., Amoxicillin 500mg, 3 times daily for 7 days&#10;Paracetamol 500mg as needed for pain&#10;Follow-up in 1 week"
+                            className="min-h-[120px] resize-none"
+                        />
+                    </div>
+                </div>
+                <AlertDialogFooter className="flex-shrink-0">
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDischarge} 
+                      disabled={!diagnosis.trim() || !prescription.trim()}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Discharge Patient
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+      </CardContent>
+    </Card>
+  );
+};
+
+const QueueColumn = ({ title, patients, color, icon, stage }: { 
+  title: string; 
+  patients: Patient[]; 
+  color: string;
+  icon: React.ReactNode;
+  stage: QueueStage;
+}) => {
+  return (
+    <div className="flex flex-col h-full" id={`queue-${stage.replace(/\s+/g, '-').toLowerCase()}`}>
+        <Card className="bg-gradient-to-br from-card to-card/50 backdrop-blur-sm border shadow-lg h-full flex flex-col">
+            <CardHeader className="flex-shrink-0 p-4 border-b bg-gradient-to-r from-muted/30 to-muted/10">
+                <CardTitle className="text-base font-semibold flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${color} text-white shadow-sm`}>
+                          {icon}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground">{title}</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {patients.length} patient{patients.length !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                    </div>
+                    <Badge variant="secondary" className="font-bold text-sm px-3 py-1">
+                      {patients.length}
+                      {stage === 'Results by Doctor' && patients.length > 0 && (
+                        <span className="ml-1 text-red-600">●</span>
+                      )}
+                    </Badge>
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                {patients
+                  .sort((a, b) => {
+                    // Sort by priority first (urgent first), then by check-in time
+                    if (a.priority === 'Urgent' && b.priority !== 'Urgent') return -1;
+                    if (a.priority !== 'Urgent' && b.priority === 'Urgent') return 1;
+                    
+                    // For Results by Doctor stage, sort by how long results have been waiting
+                    if (stage === 'Results by Doctor') {
+                      return new Date(a.checkInTime).getTime() - new Date(b.checkInTime).getTime();
+                    }
+                    
+                    return new Date(a.checkInTime).getTime() - new Date(b.checkInTime).getTime();
+                  })
+                  .map(p => <PatientCard key={p.id} patient={p} />)
+                }
+                {patients.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                      {icon}
+                    </div>
+                    <p className="text-muted-foreground text-sm">No patients in this stage</p>
+                  </div>
+                )}
+            </CardContent>
+        </Card>
+    </div>
+  );
+};
+
+// Removed old RoleProvider, QueueShortcuts, and RoleSwitcher components
+// Now using useAuth directly for role-based filtering
+
+export default function ClinicQueueManager() {
+  const { patients } = usePatientQueue();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Get relevant stages based on user role
+  const relevantStages = getRelevantStages(user?.role || '');
+  
+  // Filter patients to only show those in relevant stages
+  const relevantPatients = patients.filter(p => relevantStages.includes(p.stage));
+
+  const stageConfig: Record<QueueStage, { color: string; icon: JSX.Element }> = {
+    'Waiting Room': {
+      color: 'bg-blue-500',
+      icon: <User className="h-4 w-4" />
+    },
+    'Triage': {
+      color: 'bg-teal-500',
+      icon: <Activity className="h-4 w-4" />
+    },
+    'Questioning': {
+      color: 'bg-yellow-500',
+      icon: <Stethoscope className="h-4 w-4" />
+    },
+    'Laboratory Test': {
+      color: 'bg-purple-500',
+      icon: <TestTube className="h-4 w-4" />
+    },
+    'Results by Doctor': {
+      color: 'bg-green-500',
+      icon: <FileText className="h-4 w-4" />
+    },
+    'Discharged': {
+      color: 'bg-gray-500',
+      icon: <CheckCircle2 className="h-4 w-4" />
+    },
+  };
+
+  const totalPatients = relevantPatients.length;
+  const urgentPatients = relevantPatients.filter(p => p.priority === 'Urgent').length;
+
+  // Get role display name
+  const getRoleDisplayName = (role: string) => {
+    switch(role) {
+      case 'reception': return 'Reception';
+      case 'triage': return 'Triage';
+      case 'nurse': return 'Nurse';
+      case 'staff': return 'Triage Nurse';
+      case 'doctor': return 'Doctor';
+      case 'laboratory': return 'Laboratory';
+      case 'admin': return 'Administrator';
+      default: return 'User';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <main className="container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
+        {/* Header */}
+        <div className="bg-card rounded-xl border shadow-sm p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="space-y-2">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  Patient Queue - {getRoleDisplayName(user?.role || '')}
+                </h1>
+                <p className="text-muted-foreground">
+                    {totalPatients} patient{totalPatients !== 1 ? 's' : ''} in your queue
+                    {urgentPatients > 0 && (
+                      <span className="ml-2 text-red-600 font-medium">
+                        • {urgentPatients} urgent
+                      </span>
+                    )}
+                </p>
+            </div>
+            {user?.role === 'reception' && (
+              <Button 
+                onClick={() => navigate('/reception/add-user')}
+                className="bg-primary hover:bg-primary/90 shadow-sm transition-all duration-200 hover:scale-105"
+              >
+                  <Plus className="mr-2 h-4 w-4"/> Add Patient
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Queue Grid - Only show relevant stages */}
+        <div className={`grid gap-6 ${relevantStages.length === 1 ? 'grid-cols-1 max-w-2xl mx-auto' : relevantStages.length === 2 ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4'}`}>
+            {relevantStages.map((stage) => (
+            <QueueColumn
+                key={stage}
+                title={stage}
+                patients={relevantPatients.filter(p => p.stage === stage)}
+                color={stageConfig[stage].color}
+                icon={stageConfig[stage].icon}
+                stage={stage}
+            />
+            ))}
+        </div>
+      </main>
+    </div>
+  );
+}

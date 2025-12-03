@@ -1,0 +1,294 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 215.4 16.3% 46.9%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 215.4 16.3% 46.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 217.2 91.2% 59.8%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 84% 4.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 217.2 91.2% 59.8%;
+
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-dark-300 text-white font-body;
+  }
+  
+  body.login-page {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .sub-container {
+    @apply rounded-xl border bg-card p-4 sm:p-8 xl:p-12;
+  }
+
+  .form-input {
+    @apply flex rounded-md border border-input bg-background;
+  }
+
+  .form-label {
+    @apply text-base font-semibold text-muted-foreground;
+  }
+
+  .form-btn {
+    @apply flex h-[48px] w-full items-center justify-center gap-2 rounded-lg bg-primary px-10 text-base font-bold text-primary-foreground;
+  }
+
+  .form-btn_cancel {
+    @apply flex h-[48px] w-full items-center justify-center gap-2 rounded-lg bg-card px-10 text-base font-bold;
+  }
+
+  .date-picker {
+    @apply flex h-11 items-center justify-between rounded-md border border-input bg-background px-3 py-2;
+  }
+
+  .file-uploader {
+    @apply flex h-60 cursor-pointer flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-border bg-card;
+  }
+  .stat-card {
+    @apply flex flex-col gap-y-3 rounded-xl p-4;
+  }
+  
+  .bg-appointments {
+    background-color: #7ce0c3; /* A lighter, soothing green */
+  }
+
+  .bg-pending {
+    background-color: #8ab7ff; /* A softer, friendly blue */
+  }
+
+  .bg-cancelled {
+    background-color: #ff9a9a; /* A less jarring red */
+  }
+
+  .bg-lab {
+    background-color: #f0c47b; /* A warm, inviting orange */
+  }
+  .bg-discharged {
+    background-color: #b2aaff; /* A calming purple */
+  }
+
+  .dashboard-box {
+    @apply bg-gray-900 border border-gray-800 text-white;
+  }
+
+  .theme-card {
+    background-color: #081226;
+    border-color: hsl(var(--border));
+    color: #FFFFFF;
+  }
+
+  .theme-input {
+    background-color: #040C1D;
+    border-color: hsl(var(--border));
+    color: #FFFFFF;
+  }
+
+  .theme-label {
+    color: #A6AAB2;
+  }
+
+  .theme-text-secondary {
+    color: #A6AAB2;
+  }
+
+  .theme-button {
+    background-color: #040C1D;
+    color: #FFFFFF;
+  }
+}
+
+@layer utilities {
+  /* UTILITIES */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    border-radius: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 6px;
+  }
+
+  .remove-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* TYPOGRAPHY */
+  .h1-bold {
+    @apply text-3xl font-bold;
+  }
+
+  .header {
+    @apply text-2xl font-bold md:text-3xl;
+  }
+
+  .h2-bold {
+    @apply text-xl font-bold;
+  }
+
+  .h3-bold {
+    @apply text-lg font-bold;
+  }
+
+  .body-regular {
+    @apply text-base font-normal;
+  }
+
+  .text-10-regular {
+    @apply text-[10px] font-normal;
+  }
+  .text-12-regular {
+    @apply text-xs font-normal;
+  }
+  .text-12-semibold {
+    @apply text-xs font-semibold;
+  }
+  .text-14-regular {
+    @apply text-sm font-normal;
+  }
+  .text-14-medium {
+    @apply text-sm font-medium;
+  }
+  .text-14-semibold {
+    @apply text-sm font-semibold;
+  }
+  .text-16-regular {
+    @apply text-base font-normal;
+  }
+  .text-16-medium {
+    @apply text-base font-medium;
+  }
+  .text-16-semibold {
+    @apply text-base font-semibold;
+  }
+  .text-18-medium {
+    @apply text-lg font-medium;
+  }
+  .text-18-semibold {
+    @apply text-lg font-semibold;
+  }
+  .text-20-medium {
+    @apply text-xl font-medium;
+  }
+  .text-20-semibold {
+    @apply text-xl font-semibold;
+  }
+  .text-24-medium {
+    @apply text-2xl font-medium;
+  }
+  .text-24-semibold {
+    @apply text-2xl font-semibold;
+  }
+  .text-30-bold {
+    @apply text-3xl font-bold;
+  }
+  .text-36-bold {
+    @apply text-4xl font-bold;
+  }
+  
+  .side-img {
+    @apply hidden h-screen object-cover md:block;
+  }
+  
+  .copyright {
+    @apply text-sm text-muted-foreground;
+  }
+  
+  .admin-header {
+    @apply flex items-center justify-between p-4 md:p-0;
+  }
+  
+  .admin-main {
+    @apply flex flex-col gap-10 p-4 md:p-0;
+  }
+  
+  .admin-stat {
+    @apply grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+  
+  .status-badge {
+    @apply inline-flex items-center rounded-full px-2 py-1 text-xs font-medium;
+  }
+  
+  .data-table {
+    @apply w-full overflow-auto;
+  }
+  
+  .text-32-bold {
+    @apply text-3xl font-bold;
+  }
+}
