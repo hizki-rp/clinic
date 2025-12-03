@@ -65,6 +65,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://symmetrical-doodle-5w7q67grxj37j7-9002.app.github.dev',
     'https://clinic-nesc.onrender.com',  # Backend Render deployment
     'https://clinic-l8sc.vercel.app',  # Frontend Vercel deployment
+    "https://clinic-omega-two.vercel.app",
 ]
 
 # Trust the 'X-Forwarded-Proto' header from the reverse proxy (like Render)
