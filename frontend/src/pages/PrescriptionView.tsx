@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Printer, Download, FileText, User, Calendar, CreditCard, Stethoscope } from 'lucide-react';
+import { ArrowLeft, Printer, Download, FileText, User, CreditCard, Stethoscope } from 'lucide-react';
 import { usePatientQueue } from '@/context/PatientQueueContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -332,7 +332,7 @@ export default function PrescriptionView() {
       </div>
 
       {/* Print Styles */}
-      <style jsx>{`
+      <style>{`
         @media print {
           body {
             background: white !important;
