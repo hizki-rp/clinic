@@ -24,6 +24,7 @@ import PatientManagement from './pages/PatientManagement';
 import Appointments from './pages/Appointments';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import PatientReadmission from './pages/PatientReadmission';
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,8 @@ const router = createBrowserRouter([
       { path: 'payment-success', element: <PaymentSuccessPage /> },
       { path: 'reception/queue', element: <ProtectedRoute allowedRoles={['reception', 'doctor', 'laboratory']}><Queue /></ProtectedRoute> },
       { path: 'reception/add-user', element: <ProtectedRoute allowedRoles={['reception']}><AddUser /></ProtectedRoute> },
+      { path: 'reception/readmit-patient', element: <ProtectedRoute allowedRoles={['reception', 'nurse']}><PatientReadmission /></ProtectedRoute> },
+      { path: 'queue', element: <ProtectedRoute allowedRoles={['reception', 'doctor', 'laboratory', 'nurse', 'admin']}><Queue /></ProtectedRoute> },
       { path: 'admin', element: <ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute> },
       { path: 'patients/:userId/summary', element: <ProtectedRoute><PatientSummary /></ProtectedRoute> },
       { path: 'patients/:userId/prescription', element: <ProtectedRoute><Prescription /></ProtectedRoute> },
