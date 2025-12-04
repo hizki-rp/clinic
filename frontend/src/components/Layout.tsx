@@ -59,6 +59,22 @@ export default function Layout({ children }: LayoutProps) {
                     <UserPlus size={20} />
                     <span>Add Patient</span>
                   </Link>
+                  <Link to="/reception/patient-management" className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors">
+                    <Users size={20} />
+                    <span>Patient Management</span>
+                  </Link>
+                  <Link to="/reception/queue" className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors">
+                    <ListOrdered size={20} />
+                    <span>Patient Queue</span>
+                  </Link>
+                </>
+              )}
+              {isAuthenticated && user?.role === 'nurse' && (
+                <>
+                  <Link to="/reception/patient-management" className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors">
+                    <Users size={20} />
+                    <span>Patient Management</span>
+                  </Link>
                   <Link to="/reception/queue" className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors">
                     <ListOrdered size={20} />
                     <span>Patient Queue</span>

@@ -25,6 +25,7 @@ import Appointments from './pages/Appointments';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import PatientReadmission from './pages/PatientReadmission';
+import PatientManagementHub from './pages/PatientManagementHub';
 
 const router = createBrowserRouter([
   {
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { path: 'reception/queue', element: <ProtectedRoute allowedRoles={['reception', 'doctor', 'laboratory']}><Queue /></ProtectedRoute> },
       { path: 'reception/add-user', element: <ProtectedRoute allowedRoles={['reception']}><AddUser /></ProtectedRoute> },
       { path: 'reception/readmit-patient', element: <ProtectedRoute allowedRoles={['reception', 'nurse']}><PatientReadmission /></ProtectedRoute> },
+      { path: 'reception/patient-management', element: <ProtectedRoute allowedRoles={['reception', 'nurse']}><PatientManagementHub /></ProtectedRoute> },
       { path: 'queue', element: <ProtectedRoute allowedRoles={['reception', 'doctor', 'laboratory', 'nurse', 'admin']}><Queue /></ProtectedRoute> },
       { path: 'admin', element: <ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute> },
       { path: 'patients/:userId/summary', element: <ProtectedRoute><PatientSummary /></ProtectedRoute> },
