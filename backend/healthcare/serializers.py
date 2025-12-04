@@ -342,7 +342,10 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
     def validate_appointment_date(self, value):
         """Ensure appointment is not in the past"""
-        if value < datetime.now():
+        from django.utils import timezone
+        now = timezone.now()
+        # Make comparison timezone-aware
+        if value < now:
             raise serializers.ValidationError(
                 'Appointment date cannot be in the past.'
             )
