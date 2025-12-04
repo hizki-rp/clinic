@@ -217,7 +217,7 @@ const PatientManagementHub = () => {
         },
         body: JSON.stringify({
           age: parseInt(editFormData.age) || null,
-          gender: editFormData.sex,
+          gender: editFormData.sex ? editFormData.sex.toLowerCase() : null,
           phone: editFormData.phone,
           address: editFormData.address,
           user: {
@@ -537,8 +537,8 @@ const PatientManagementHub = () => {
                           className="w-full p-2 border rounded-lg bg-background text-foreground"
                         >
                           <option value="">Select Gender</option>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
                         </select>
                       </div>
                     </div>
