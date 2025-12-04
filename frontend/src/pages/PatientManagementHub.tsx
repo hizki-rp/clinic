@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, UserPlus, Phone, MapPin, User, Edit, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { usePatientQueue, type PatientPriority } from '@/context/PatientQueueContext';
+import { usePatientQueue } from '@/context/PatientQueueContext';
 import { API_BASE_URL } from '@/lib/constants';
 
 interface PatientSearchResult {
@@ -29,7 +29,7 @@ interface PatientSearchResult {
 const PatientManagementHub = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addPatient } = usePatientQueue();
+  const { reAdmitPatient } = usePatientQueue();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([]);
@@ -158,19 +158,8 @@ const PatientManagementHub = () => {
     }
 
     try {
-      const newPatient = {
-        id: selectedPatient.id,
-        name: selectedPatient.name,
-        age: selectedPatient.age,
-        sex: selectedPatient.sex,
-        phone: selectedPatient.phone,
-        email: selectedPatient.email,
-        address: selectedPatient.address,
-        priority: priority as PatientPriority,
-        reason: reason,
-      };
-
-      addPatient(newPatient);
+      // Use reAdmitPatient which creates a new visit for existing patient
+      await reAdmitPatient(selectedPatient.id);
 
       toast({
         title: 'Patient Readmitted',
@@ -183,7 +172,7 @@ const PatientManagementHub = () => {
       setPriority('Normal');
       
       // Navigate to queue
-      setTimeout(() => navigate('/queue'), 1500);
+      setTimeout(() => navigate('/reception/queue'), 1500);
     } catch (error) {
       console.error('Readmission error:', error);
       toast({
@@ -211,10 +200,14 @@ const PatientManagementHub = () => {
     try {
       const [firstName, ...lastNameParts] = editFormData.name.split(' ');
       const lastName = lastNameParts.join(' ');
+      const token = localStorage.getItem('access_token');
 
       const response = await fetch(`${API_BASE_URL}/healthcare/patients/${selectedPatient.id}/`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           age: parseInt(editFormData.age) || null,
           gender: editFormData.sex,
@@ -277,20 +270,8 @@ const PatientManagementHub = () => {
     }
 
     try {
-      const newPatient = {
-        id: selectedPatient.id,
-        name: selectedPatient.name,
-        age: selectedPatient.age,
-        sex: selectedPatient.sex,
-        phone: selectedPatient.phone,
-        email: selectedPatient.email,
-        address: selectedPatient.address,
-        priority: appointmentData.priority as PatientPriority,
-        reason: appointmentData.reason,
-        notes: appointmentData.notes,
-      };
-
-      addPatient(newPatient);
+      // Use reAdmitPatient which creates a new visit for existing patient
+      await reAdmitPatient(selectedPatient.id);
 
       toast({
         title: 'Appointment Created',
@@ -306,7 +287,7 @@ const PatientManagementHub = () => {
       });
       
       // Navigate to queue
-      setTimeout(() => navigate('/queue'), 1500);
+      setTimeout(() => navigate('/reception/queue'), 1500);
     } catch (error) {
       console.error('Appointment creation error:', error);
       toast({
