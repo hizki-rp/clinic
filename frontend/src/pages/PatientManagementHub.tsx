@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { API_BASE_URL } from '@/lib/constants';
 
 interface PatientSearchResult {
   id: string;
+  patient_id: string;
   name: string;
   age?: number;
   sex?: string;
@@ -36,6 +37,7 @@ const PatientManagementHub = () => {
   const [loading, setLoading] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<PatientSearchResult | null>(null);
   const [activeTab, setActiveTab] = useState('search');
+  const [allPatients, setAllPatients] = useState<any[]>([]);
   
   // Readmission form
   const [reason, setReason] = useState('');
@@ -58,78 +60,82 @@ const PatientManagementHub = () => {
     notes: ''
   });
 
-  // Search patients
-  const handleSearch = async () => {
+  // Fetch all patients on component mount
+  useEffect(() => {
+    const fetchAllPatients = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`${API_BASE_URL}/healthcare/patients/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const patients = await response.json();
+          setAllPatients(patients);
+        }
+      } catch (error) {
+        console.error('Error fetching patients:', error);
+      }
+    };
+
+    fetchAllPatients();
+  }, []);
+
+  // Auto-search with debouncing
+  useEffect(() => {
     if (!searchTerm.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Search Required',
-        description: 'Please enter a search term',
-      });
+      setSearchResults([]);
       return;
     }
 
-    setLoading(true);
-    try {
-      // Fetch all patients from the API
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`${API_BASE_URL}/healthcare/patients/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    const timeoutId = setTimeout(() => {
+      performSearch(searchTerm);
+    }, 300); // 300ms debounce
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch patients');
-      }
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, allPatients]);
 
-      const patients = await response.json();
-      
-      // Filter patients based on search term
-      const searchLower = searchTerm.toLowerCase();
-      const filtered = patients.filter((patient: any) => {
-        const fullName = `${patient.user?.first_name || ''} ${patient.user?.last_name || ''}`.toLowerCase();
-        return (
-          fullName.includes(searchLower) ||
-          patient.phone?.toLowerCase().includes(searchLower) ||
-          patient.user?.email?.toLowerCase().includes(searchLower) ||
-          patient.address?.toLowerCase().includes(searchLower) ||
-          patient.id?.toString().includes(searchLower)
-        );
-      });
-
-      // Map to our search result format
-      setSearchResults(filtered.map((p: any) => ({
-        id: p.id.toString(),
-        name: `${p.user?.first_name || ''} ${p.user?.last_name || ''}`.trim(),
-        age: p.age,
-        sex: p.gender,
-        phone: p.phone,
-        email: p.user?.email,
-        address: p.address,
-        card_number: p.id.toString(),
-        last_visit: p.updated_at || new Date().toISOString(),
-        total_visits: 1
-      })));
-
-      if (filtered.length === 0) {
-        toast({
-          title: 'No Results',
-          description: 'No patients found matching your search',
-        });
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Search Failed',
-        description: 'Unable to search patients. Please try again.',
-      });
-    } finally {
-      setLoading(false);
+  // Perform search on local data
+  const performSearch = useCallback((term: string) => {
+    if (!term.trim()) {
+      setSearchResults([]);
+      return;
     }
-  };
+
+    const searchLower = term.toLowerCase();
+    const filtered = allPatients.filter((patient: any) => {
+      const fullName = `${patient.user?.first_name || ''} ${patient.user?.last_name || ''}`.toLowerCase();
+      const patientId = patient.patient_id?.toLowerCase() || '';
+      const cardNumber = patient.card_number?.toLowerCase() || '';
+      
+      return (
+        fullName.includes(searchLower) ||
+        patient.phone?.toLowerCase().includes(searchLower) ||
+        patient.user?.email?.toLowerCase().includes(searchLower) ||
+        patient.address?.toLowerCase().includes(searchLower) ||
+        patientId.includes(searchLower) ||
+        cardNumber.includes(searchLower)
+      );
+    });
+
+    // Map to our search result format
+    setSearchResults(filtered.map((p: any) => ({
+      id: p.id.toString(),
+      patient_id: p.patient_id,
+      name: `${p.user?.first_name || ''} ${p.user?.last_name || ''}`.trim(),
+      age: p.age,
+      sex: p.gender,
+      phone: p.phone,
+      email: p.user?.email,
+      address: p.address,
+      card_number: p.card_number || p.patient_id,
+      last_visit: p.updated_at || new Date().toISOString(),
+      total_visits: 1
+    })));
+  }, [allPatients]);
 
   // Select patient and populate forms
   const handleSelectPatient = (patient: PatientSearchResult) => {
@@ -159,7 +165,8 @@ const PatientManagementHub = () => {
 
     try {
       // Use reAdmitPatient which creates a new visit for existing patient
-      await reAdmitPatient(selectedPatient.id);
+      // Use patient_id (not id) as the backend expects patient_id
+      await reAdmitPatient(selectedPatient.patient_id);
 
       toast({
         title: 'Patient Readmitted',
@@ -239,8 +246,18 @@ const PatientManagementHub = () => {
           address: editFormData.address
         });
         
-        // Refresh search results
-        handleSearch();
+        // Refresh all patients to update search results
+        const token = localStorage.getItem('access_token');
+        const refreshResponse = await fetch(`${API_BASE_URL}/healthcare/patients/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (refreshResponse.ok) {
+          const patients = await refreshResponse.json();
+          setAllPatients(patients);
+        }
       } else {
         throw new Error('Update failed');
       }
@@ -271,7 +288,8 @@ const PatientManagementHub = () => {
 
     try {
       // Use reAdmitPatient which creates a new visit for existing patient
-      await reAdmitPatient(selectedPatient.id);
+      // Use patient_id (not id) as the backend expects patient_id
+      await reAdmitPatient(selectedPatient.patient_id);
 
       toast({
         title: 'Appointment Created',
@@ -327,19 +345,22 @@ const PatientManagementHub = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
+            <div className="relative">
               <Input
-                placeholder="Enter name, phone, email, or address..."
+                placeholder="Type to search: name, phone, email, address, patient ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="flex-1 bg-background text-foreground"
+                className="flex-1 bg-background text-foreground pr-10"
               />
-              <Button onClick={handleSearch} disabled={loading}>
-                <Search className="h-4 w-4 mr-2" />
-                {loading ? 'Searching...' : 'Search'}
-              </Button>
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
+            {searchTerm && (
+              <p className="text-sm text-muted-foreground">
+                {searchResults.length > 0 
+                  ? `Found ${searchResults.length} patient${searchResults.length !== 1 ? 's' : ''}`
+                  : 'No patients found'}
+              </p>
+            )}
 
             {/* Search Results */}
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
@@ -385,7 +406,7 @@ const PatientManagementHub = () => {
                     </CardContent>
                   </Card>
                 ))
-              ) : searchTerm && !loading ? (
+              ) : searchTerm ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>No patients found</p>
@@ -394,7 +415,8 @@ const PatientManagementHub = () => {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Enter a search term to find patients</p>
+                  <p>Start typing to search patients</p>
+                  <p className="text-sm">Search by name, phone, email, address, or patient ID</p>
                 </div>
               )}
             </div>
