@@ -51,6 +51,32 @@ class PatientViewSet(viewsets.ModelViewSet):
             return PatientCreateSerializer
         return PatientSerializer
     
+    def update(self, request, *args, **kwargs):
+        """Custom update to handle nested user updates"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        # Extract user data if provided
+        user_data = request.data.pop('user', None)
+        
+        # Update patient fields
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        # Update user fields if provided
+        if user_data and instance.user:
+            user = instance.user
+            if 'first_name' in user_data:
+                user.first_name = user_data['first_name']
+            if 'last_name' in user_data:
+                user.last_name = user_data['last_name']
+            if 'email' in user_data:
+                user.email = user_data['email']
+            user.save()
+        
+        return Response(serializer.data)
+    
     @action(detail=True, methods=['get'])
     def medical_record(self, request, pk=None):
         patient = self.get_object()
