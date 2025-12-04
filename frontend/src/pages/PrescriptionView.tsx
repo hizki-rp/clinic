@@ -332,7 +332,8 @@ export default function PrescriptionView() {
       </div>
 
       {/* Print Styles */}
-      <style>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
           body {
             background: white !important;
@@ -344,7 +345,7 @@ export default function PrescriptionView() {
             background: white !important;
           }
         }
-      `}</style>
+      `}} />
     </div>
   );
 }
