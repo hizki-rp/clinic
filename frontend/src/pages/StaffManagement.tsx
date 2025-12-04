@@ -452,31 +452,31 @@ const StaffManagement = () => {
                 </Button>
                 
                 {createdCredentials && (
-                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <h4 className="font-semibold text-green-800 mb-3">Staff Created Successfully!</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between py-2 border-b">
-                        <span className="font-medium">Employee ID:</span>
+                  <div className="mt-6 p-4 bg-green-900/10 dark:bg-green-900/20 border border-green-600/30 rounded-lg">
+                    <h4 className="font-semibold text-green-700 dark:text-green-400 mb-3">Staff Created Successfully!</h4>
+                    <div className="space-y-2 text-sm text-foreground">
+                      <div className="flex items-center justify-between py-2 border-b border-border">
+                        <span className="font-medium text-muted-foreground">Employee ID:</span>
                         <div className="flex items-center gap-2">
-                          <code className="bg-white px-3 py-1 rounded border">{createdCredentials.employee_id}</code>
+                          <code className="bg-muted px-3 py-1 rounded border border-border text-foreground">{createdCredentials.employee_id}</code>
                           <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.employee_id)}>
                             Copy
                           </Button>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between py-2 border-b">
-                        <span className="font-medium">Email:</span>
+                      <div className="flex items-center justify-between py-2 border-b border-border">
+                        <span className="font-medium text-muted-foreground">Email:</span>
                         <div className="flex items-center gap-2">
-                          <code className="bg-white px-3 py-1 rounded border">{createdCredentials.email}</code>
+                          <code className="bg-muted px-3 py-1 rounded border border-border text-foreground">{createdCredentials.email}</code>
                           <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.email)}>
                             Copy
                           </Button>
                         </div>
                       </div>
                       <div className="flex items-center justify-between py-2">
-                        <span className="font-medium">Password:</span>
+                        <span className="font-medium text-muted-foreground">Password:</span>
                         <div className="flex items-center gap-2">
-                          <code className="bg-white px-3 py-1 rounded border">{createdCredentials.password}</code>
+                          <code className="bg-muted px-3 py-1 rounded border border-border text-foreground">{createdCredentials.password}</code>
                           <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(createdCredentials.password)}>
                             Copy
                           </Button>

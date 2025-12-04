@@ -84,12 +84,11 @@ const EditPatientModal: React.FC<EditPatientModalProps> = ({ patient, onClose, o
               <select
                 value={formData.sex}
                 onChange={(e) => setFormData({...formData, sex: e.target.value})}
-                className="p-2 border rounded-lg"
+                className="p-2 border rounded-lg bg-background text-foreground"
               >
                 <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
               </select>
             </div>
             <Input
