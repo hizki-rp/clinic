@@ -29,7 +29,7 @@ interface PatientSearchResult {
 const PatientManagementHub = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addPatient, allPatients } = usePatientQueue();
+  const { addPatient } = usePatientQueue();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<PatientSearchResult[]>([]);
@@ -71,25 +71,43 @@ const PatientManagementHub = () => {
 
     setLoading(true);
     try {
-      const searchLower = searchTerm.toLowerCase();
-      const filtered = allPatients.filter(patient => 
-        patient.name?.toLowerCase().includes(searchLower) ||
-        patient.phone?.toLowerCase().includes(searchLower) ||
-        patient.email?.toLowerCase().includes(searchLower) ||
-        patient.address?.toLowerCase().includes(searchLower) ||
-        patient.id?.toLowerCase().includes(searchLower)
-      );
+      // Fetch all patients from the API
+      const response = await fetch(`${API_BASE_URL}/healthcare/patients/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
 
-      setSearchResults(filtered.map(p => ({
-        id: p.id,
-        name: p.name,
+      if (!response.ok) {
+        throw new Error('Failed to fetch patients');
+      }
+
+      const patients = await response.json();
+      
+      // Filter patients based on search term
+      const searchLower = searchTerm.toLowerCase();
+      const filtered = patients.filter((patient: any) => {
+        const fullName = `${patient.user?.first_name || ''} ${patient.user?.last_name || ''}`.toLowerCase();
+        return (
+          fullName.includes(searchLower) ||
+          patient.phone?.toLowerCase().includes(searchLower) ||
+          patient.user?.email?.toLowerCase().includes(searchLower) ||
+          patient.address?.toLowerCase().includes(searchLower) ||
+          patient.id?.toString().includes(searchLower)
+        );
+      });
+
+      // Map to our search result format
+      setSearchResults(filtered.map((p: any) => ({
+        id: p.id.toString(),
+        name: `${p.user?.first_name || ''} ${p.user?.last_name || ''}`.trim(),
         age: p.age,
-        sex: p.sex,
+        sex: p.gender,
         phone: p.phone,
-        email: p.email,
+        email: p.user?.email,
         address: p.address,
-        card_number: p.id,
-        last_visit: new Date().toISOString(),
+        card_number: p.id.toString(),
+        last_visit: p.updated_at || new Date().toISOString(),
         total_visits: 1
       })));
 
@@ -104,7 +122,7 @@ const PatientManagementHub = () => {
       toast({
         variant: 'destructive',
         title: 'Search Failed',
-        description: 'Unable to search patients',
+        description: 'Unable to search patients. Please try again.',
       });
     } finally {
       setLoading(false);
@@ -139,6 +157,7 @@ const PatientManagementHub = () => {
 
     try {
       const newPatient = {
+        id: selectedPatient.id,
         name: selectedPatient.name,
         age: selectedPatient.age,
         sex: selectedPatient.sex,
@@ -146,6 +165,7 @@ const PatientManagementHub = () => {
         email: selectedPatient.email,
         address: selectedPatient.address,
         priority: priority as PatientPriority,
+        reason: reason,
       };
 
       addPatient(newPatient);
@@ -256,6 +276,7 @@ const PatientManagementHub = () => {
 
     try {
       const newPatient = {
+        id: selectedPatient.id,
         name: selectedPatient.name,
         age: selectedPatient.age,
         sex: selectedPatient.sex,
@@ -263,6 +284,8 @@ const PatientManagementHub = () => {
         email: selectedPatient.email,
         address: selectedPatient.address,
         priority: appointmentData.priority as PatientPriority,
+        reason: appointmentData.reason,
+        notes: appointmentData.notes,
       };
 
       addPatient(newPatient);
