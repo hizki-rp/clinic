@@ -16,6 +16,7 @@ import Queue from './pages/Queue.tsx';
 import Login from './pages/Login.tsx';
 import StaffManagement from './pages/StaffManagement.tsx';
 import PatientManagement from './pages/PatientManagement.jsx';
+import PatientManagementHub from './pages/PatientManagementHub.tsx';
 import Appointments from './pages/Appointments.jsx';
 import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
@@ -39,6 +40,7 @@ function App() {
                 <Route path="/patients/:userId/prescription" element={<Prescription />} />
                 <Route path="/patients/:userId/summary" element={<PatientSummary />} />
                 <Route path="/reception/add-user" element={<AddUser />} />
+                <Route path="/reception/patient-management" element={<ProtectedRoute allowedRoles={['reception', 'nurse']}><PatientManagementHub /></ProtectedRoute>} />
                 <Route path="/reception/queue" element={<Queue />} />
                 <Route path="/staff-management" element={<ProtectedRoute allowedRoles={['admin', 'doctor', 'laboratory']}><StaffManagement /></ProtectedRoute>} />
                 <Route path="/patients" element={<ProtectedRoute allowedRoles={['admin', 'doctor', 'nurse', 'reception']}><PatientManagement /></ProtectedRoute>} />
