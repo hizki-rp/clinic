@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menaharia Clinic - Integration Proposal</title>
+    <style>
+        @page {
+            margin: 1in;
+            @top-center {
+                content: "Menaharia Medium Clinic - Integration Proposal";
+            }
+            @bottom-right {
+                content: "Page " counter(page);
+            }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 8.5in;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .cover-page {
+            text-align: center;
+            padding: 3in 0;
+            page-break-after: always;
+        }
+        
+        .cover-page h1 {
+            font-size: 36pt;
+            color: #1e40af;
+            margin-bottom: 20px;
+        }
+        
+        .cover-page h2 {
+            font-size: 24pt;
+            color: #2563eb;
+            margin-bottom: 40px;
+        }
+        
+        .cover-page .clinic-name {
+            font-size: 20pt;
+            color: #333;
+            margin: 40px 0;
+        }
+        
+        .cover-page .date {
+            font-size: 14pt;
+            color: #666;
+        }
+        
+        h1 {
+            color: #1e40af;
+            font-size: 24pt;
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 10px;
+            margin-top: 40px;
+            page-break-before: always;
+        }
+        
+        h2 {
+            color: #2563eb;
+            font-size: 18pt;
+            margin-top: 30px;
+        }
+        
+        h3 {
+            color: #3b82f6;
+            font-size: 14pt;
+            margin-top: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        th {
+            background-color: #1e40af;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
+        .info-box {
+            background-color: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 15px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        .warning-box {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .success-box {
+            background-color: #d1fae5;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        .form-field {
+            border-bottom: 1px solid #333;
+            display: inline-block;
+            min-width: 300px;
+            margin: 0 10px;
+        }
+        
+        .checkbox {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border: 2px solid #333;
+            margin: 0 5px;
+            vertical-align: middle;
+        }
+        
+        .signature-section {
+            margin-top: 60px;
+            page-break-inside: avoid;
+        }
+        
+        .signature-line {
+            border-bottom: 2px solid #333;
+            width: 300px;
+            margin: 30px 0 10px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 10pt;
+            color: #666;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            
+            .page-break {
+                page-break-after: always;
+            }
+            
+            h1 {
+                page-break-after: avoid;
+            }
+            
+            h2, h3 {
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Cover Page -->
+<div class="cover-page">
+    <h1>Healthcare Management System</h1>
+    <h2>Integration Proposal</h2>
+    <div class="clinic-name">Menaharia Medium Clinic</div>
+    <div class="date">
+        <p>Prepared: December 4, 2024</p>
+        <p>Version 1.0</p>
+    </div>
+</div>
+
+<!-- Executive Summary -->
+<h1>Executive Summary</h1>
+<p>This document outlines the comprehensive Healthcare Management System developed for Menaharia Medium Clinic. The system is designed to streamline patient management, queue operations, staff coordination, and administrative tasks.</p>
+
+<div class="success-box">
+    <h3>Key Benefits</h3>
+    <ul>
+        <li>Real-time patient queue management across 5 stages</li>
+        <li>Complete electronic health records (EHR) system</li>
+        <li>Automated report generation (PDF format)</li>
+        <li>Role-based access control for security</li>
+        <li>Staff management and coordination</li>
+        <li>Laboratory test tracking and results</li>
+        <li>Digital prescription generation</li>
+    </ul>
+</div>
+
+<!-- System Overview -->
+<h1>1. System Overview</h1>
+
+<h2>Complete Digital Solution</h2>
+<p>The Healthcare Management System provides end-to-end digital management of clinic operations, from patient registration through discharge, including all intermediate stages of care.</p>
+
+<h3>Technology Stack</h3>
+<table>
+    <tr>
+        <th>Component</th>
+        <th>Technology</th>
+        <th>Purpose</th>
+    </tr>
+    <tr>
+        <td>Frontend</td>
+        <td>React + TypeScript</td>
+        <td>Modern, responsive web interface</td>
+    </tr>
+    <tr>
+        <td>Backend</td>
+        <td>Django REST Framework</td>
+        <td>Secure, scalable API</td>
+    </tr>
+    <tr>
+        <td>Database</td>
+        <td>SQLite/PostgreSQL</td>
+        <td>Reliable data storage</td>
+    </tr>
+    <tr>
+        <td>Deployment</td>
+        <td>Vercel + Cloud</td>
+        <td>High availability hosting</td>
+    </tr>
+</table>
+
+<!-- Current Features -->
+<h1>2. Current Features & Capabilities</h1>
+
+<h2>✓ Patient Management</h2>
+<ul>
+    <li>Patient registration with complete demographics</li>
+    <li>Patient search and filtering</li>
+    <li>Patient card number system</li>
+    <li>Medical history tracking</li>
+    <li>Visit history and records</li>
+</ul>
+
+<h2>✓ Queue Management System</h2>
+<ul>
+    <li>5-stage workflow: Waiting Room → Triage → Questioning → Laboratory Test → Results by Doctor</li>
+    <li>Real-time patient tracking</li>
+    <li>Role-based queue visibility</li>
+    <li>Priority management</li>
+    <li>Stage-specific actions</li>
+</ul>
+
+<h2>✓ Staff Management</h2>
+<ul>
+    <li>Employee registration with credentials</li>
+    <li>Role assignment (Admin, Doctor, Reception, Laboratory, Staff)</li>
+    <li>Department management</li>
+    <li>Staff directory with search</li>
+</ul>
+
+<h2>✓ Reports & Analytics</h2>
+<ul>
+    <li>Revenue Summary Reports (PDF)</li>
+    <li>Patient Demographics Reports (PDF)</li>
+    <li>Visit History Reports (PDF)</li>
+    <li>Staff Performance Reports (PDF)</li>
+    <li>Appointment Analytics (PDF)</li>
+    <li>Resource Utilization Reports (PDF)</li>
+</ul>
+
+<!-- User Roles -->
+<h1>3. User Roles & Access Levels</h1>
+
+<table>
+    <tr>
+        <th>Role</th>
+        <th>Access Level</th>
+        <th>Key Responsibilities</th>
+    </tr>
+    <tr>
+        <td><strong>Admin</strong></td>
+        <td>Full System</td>
+        <td>Staff management, reports, system configuration, all patient operations</td>
+    </tr>
+    <tr>
+        <td><strong>Doctor</strong></td>
+        <td>Clinical</td>
+        <td>Patient examination, prescriptions, lab orders, diagnosis</td>
+    </tr>
+    <tr>
+        <td><strong>Reception</strong></td>
+        <td>Front Desk</td>
+        <td>Patient registration, appointments, waiting room management</td>
+    </tr>
+    <tr>
+        <td><strong>Laboratory</strong></td>
+        <td>Lab Only</td>
+        <td>Test management, result entry, test tracking</td>
+    </tr>
+    <tr>
+        <td><strong>Nurse/Triage</strong></td>
+        <td>Triage</td>
+        <td>Vital signs recording, initial assessment</td>
+    </tr>
+</table>
+
+<!-- Required Information -->
+<h1>4. Required Clinic Information</h1>
+
+<div class="warning-box">
+    <strong>Important:</strong> To complete the integration, we need the following information from your clinic. Please fill in all sections and return within 7 days.
+</div>
+
+<h2>📋 SECTION A: Clinic Details</h2>
+
+<p><strong>1. Official Clinic Name:</strong> <span class="form-field"></span></p>
+<p><strong>2. Registration Number:</strong> <span class="form-field"></span></p>
+
+<p><strong>3. Physical Address:</strong></p>
+<ul style="list-style: none;">
+    <li>Street: <span class="form-field"></span></li>
+    <li>City: <span class="form-field"></span></li>
+    <li>Region: <span class="form-field"></span></li>
+    <li>Postal Code: <span class="form-field"></span></li>
+</ul>
+
+<p><strong>4. Contact Information:</strong></p>
+<ul style="list-style: none;">
+    <li>Main Phone: <span class="form-field"></span></li>
+    <li>Emergency Phone: <span class="form-field"></span></li>
+    <li>Email: <span class="form-field"></span></li>
+    <li>Website: <span class="form-field"></span></li>
+</ul>
+
+<p><strong>5. Operating Hours:</strong></p>
+<ul style="list-style: none;">
+    <li>Monday - Friday: <span class="form-field"></span> to <span class="form-field"></span></li>
+    <li>Saturday: <span class="form-field"></span> to <span class="form-field"></span></li>
+    <li>Sunday: <span class="form-field"></span> to <span class="form-field"></span></li>
+    <li>Public Holidays: <span class="checkbox"></span> Open <span class="checkbox"></span> Closed</li>
+</ul>
+
+<p><strong>6. Clinic Logo:</strong> Please provide high-resolution logo (PNG/SVG, minimum 500x500 pixels)</p>
+
+<!-- Pricing Section -->
+<h1>5. Pricing & Service Configuration</h1>
+
+<h2>📋 SECTION B: Service Pricing</h2>
+
+<h3>Consultation Fees</h3>
+<table>
+    <tr>
+        <th>Service Type</th>
+        <th>Price (ETB)</th>
+        <th>Notes</th>
+    </tr>
+    <tr>
+        <td>General Consultation</td>
+        <td></td>
+        <td>First visit</td>
+    </tr>
+    <tr>
+        <td>Follow-up Consultation</td>
+        <td></td>
+        <td>Return visit within 30 days</td>
+    </tr>
+    <tr>
+        <td>Emergency Consultation</td>
+        <td></td>
+        <td>After hours/urgent</td>
+    </tr>
+    <tr>
+        <td>Specialist Consultation</td>
+        <td></td>
+        <td>Specialist doctor</td>
+    </tr>
+</table>
+
+<h3>Registration & Administrative Fees</h3>
+<table>
+    <tr>
+        <th>Service</th>
+        <th>Price (ETB)</th>
+        <th>Notes</th>
+    </tr>
+    <tr>
+        <td>New Patient Registration</td>
+        <td></td>
+        <td>One-time fee</td>
+    </tr>
+    <tr>
+        <td>Patient Card Issuance</td>
+        <td></td>
+        <td>Physical card</td>
+    </tr>
+    <tr>
+        <td>Card Replacement</td>
+        <td></td>
+        <td>Lost/damaged card</td>
+    </tr>
+    <tr>
+        <td>Medical Certificate</td>
+        <td></td>
+        <td>Fitness/sick leave</td>
+    </tr>
+</table>
+
+<!-- Laboratory Tests -->
+<h1>6. Laboratory Tests Configuration</h1>
+
+<h2>📋 SECTION C: Laboratory Services</h2>
+
+<h3>Hematology Tests</h3>
+<table>
+    <tr>
+        <th>Test Name</th>
+        <th>Test Code</th>
+        <th>Price (ETB)</th>
+        <th>Turnaround Time</th>
+    </tr>
+    <tr>
+        <td>Complete Blood Count (CBC)</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+    <tr>
+        <td>Hemoglobin (Hb)</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+    <tr>
+        <td>Blood Group & Rh</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+    <tr>
+        <td>ESR</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+</table>
+
+<h3>Clinical Chemistry</h3>
+<table>
+    <tr>
+        <th>Test Name</th>
+        <th>Test Code</th>
+        <th>Price (ETB)</th>
+        <th>Turnaround Time</th>
+    </tr>
+    <tr>
+        <td>Blood Glucose (Fasting)</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+    <tr>
+        <td>Lipid Profile</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+    <tr>
+        <td>Liver Function Test (LFT)</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+    <tr>
+        <td>Kidney Function Test (RFT)</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+</table>
+
+<h3>Microbiology</h3>
+<table>
+    <tr>
+        <th>Test Name</th>
+        <th>Test Code</th>
+        <th>Price (ETB)</th>
+        <th>Turnaround Time</th>
+    </tr>
+    <tr>
+        <td>Urinalysis</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+    <tr>
+        <td>Stool Examination</td>
+        <td></td>
+        <td></td>
+        <td>___ hours</td>
+    </tr>
+    <tr>
+        <td>Urine Culture</td>
+        <td></td>
+        <td></td>
+        <td>___ days</td>
+    </tr>
+</table>
+
+<div class="info-box">
+    <p><strong>Laboratory Questions:</strong></p>
+    <p>Do you have an in-house laboratory? <span class="checkbox"></span> Yes <span class="checkbox"></span> No</p>
+    <p>If no, which external lab do you use? <span class="form-field"></span></p>
+    <p>Do you offer home sample collection? <span class="checkbox"></span> Yes <span class="checkbox"></span> No</p>
+</div>
+
+<!-- Staff Setup -->
+<h1>7. Staff & Department Setup</h1>
+
+<h2>📋 SECTION D: Staff Information</h2>
+
+<h3>Medical Staff</h3>
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Specialization</th>
+        <th>License Number</th>
+        <th>Email</th>
+        <th>Phone</th>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Doctor</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Doctor</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Nurse</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Lab Technician</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
+<h3>Administrative Staff</h3>
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Department</th>
+        <th>Email</th>
+        <th>Phone</th>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Reception</td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Admin</td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
+<!-- Integration Timeline -->
+<h1>8. Integration Timeline</h1>
+
+<table>
+    <tr>
+        <th>Phase</th>
+        <th>Duration</th>
+        <th>Activities</th>
+        <th>Deliverables</th>
+    </tr>
+    <tr>
+        <td>1. Information Collection</td>
+        <td>Week 1</td>
+        <td>Gather clinic data, pricing, staff info</td>
+        <td>Completed forms</td>
+    </tr>
+    <tr>
+        <td>2. Customization</td>
+        <td>Week 2-3</td>
+        <td>Configure pricing, tests, staff accounts</td>
+        <td>Customized system</td>
+    </tr>
+    <tr>
+        <td>3. Data Migration</td>
+        <td>Week 3-4</td>
+        <td>Import existing records, setup data</td>
+        <td>Migrated data</td>
+    </tr>
+    <tr>
+        <td>4. Testing</td>
+        <td>Week 4-5</td>
+        <td>System testing, UAT, bug fixes</td>
+        <td>Test reports</td>
+    </tr>
+    <tr>
+        <td>5. Training</td>
+        <td>Week 5-6</td>
+        <td>Staff training all roles</td>
+        <td>Trained staff</td>
+    </tr>
+    <tr>
+        <td>6. Go-Live</td>
+        <td>Week 7</td>
+        <td>Deployment, parallel run, support</td>
+        <td>Live system</td>
+    </tr>
+    <tr>
+        <td>7. Support</td>
+        <td>Ongoing</td>
+        <td>30-day intensive support</td>
+        <td>Stable operation</td>
+    </tr>
+</table>
+
+<!-- Training & Support -->
+<h1>9. Training & Support</h1>
+
+<h2>Training Schedule</h2>
+<table>
+    <tr>
+        <th>Role</th>
+        <th>Duration</th>
+        <th>Topics Covered</th>
+    </tr>
+    <tr>
+        <td>Admin</td>
+        <td>2 days</td>
+        <td>System configuration, staff management, reports, troubleshooting</td>
+    </tr>
+    <tr>
+        <td>Doctor</td>
+        <td>1 day</td>
+        <td>Patient workflow, prescriptions, lab orders, history review</td>
+    </tr>
+    <tr>
+        <td>Reception</td>
+        <td>1 day</td>
+        <td>Registration, queue management, appointments</td>
+    </tr>
+    <tr>
+        <td>Laboratory</td>
+        <td>1 day</td>
+        <td>Test ordering, result entry, reports</td>
+    </tr>
+    <tr>
+        <td>Nurse/Triage</td>
+        <td>1 day</td>
+        <td>Vital signs, triage assessment, handoff</td>
+    </tr>
+</table>
+
+<h2>Support Channels</h2>
+<ul>
+    <li>Email support during business hours</li>
+    <li>Phone support for urgent issues</li>
+    <li>On-site support (first 30 days)</li>
+    <li>Remote support via screen sharing</li>
+    <li>Complete user manuals and documentation</li>
+    <li>Video tutorials available online</li>
+</ul>
+
+<!-- Next Steps -->
+<h1>10. Next Steps</h1>
+
+<h2>Immediate Actions Required</h2>
+<ol>
+    <li>Review this proposal document thoroughly</li>
+    <li>Fill in all required information sections (A, B, C, D)</li>
+    <li>Gather clinic logo and any existing patient data</li>
+    <li>Schedule follow-up meeting to discuss completed information</li>
+    <li>Sign integration agreement (separate document)</li>
+</ol>
+
+<div class="info-box">
+    <h3>Contact Information</h3>
+    <p><strong>Project Manager:</strong> [To be assigned]</p>
+    <p><strong>Email:</strong> integration@clinic-system.com</p>
+    <p><strong>Phone:</strong> [To be provided]</p>
+    <p><strong>Office Hours:</strong> Monday - Friday, 9:00 AM - 5:00 PM</p>
+</div>
+
+<!-- Signature Page -->
+<div class="page-break"></div>
+<h1>Agreement Signatures</h1>
+
+<div class="signature-section">
+    <h3>Clinic Representative</h3>
+    <p>Name: <span class="form-field"></span></p>
+    <p>Title: <span class="form-field"></span></p>
+    <div class="signature-line"></div>
+    <p>Signature</p>
+    <p>Date: <span class="form-field"></span></p>
+</div>
+
+<div class="signature-section">
+    <h3>System Provider</h3>
+    <p>Name: <span class="form-field"></span></p>
+    <p>Title: <span class="form-field"></span></p>
+    <div class="signature-line"></div>
+    <p>Signature</p>
+    <p>Date: <span class="form-field"></span></p>
+</div>
+
+<div class="footer">
+    <p><strong>Confidential Document</strong></p>
+    <p>This document is confidential and intended solely for the use of Menaharia Medium Clinic.</p>
+    <p>Unauthorized distribution is prohibited.</p>
+    <p>Version 1.0 | December 4, 2024</p>
+</div>
+
+</body>
+</html>
