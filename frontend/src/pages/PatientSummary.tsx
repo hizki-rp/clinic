@@ -3,14 +3,37 @@
 import { usePatientQueue } from '@/context/PatientQueueContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileText, Printer } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { FileText, Printer, History, ChevronDown, ChevronUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Patient } from '@/context/PatientQueueContext';
+import { API_BASE_URL } from '@/lib/constants';
+
+interface Visit {
+  id: number;
+  check_in_time: string;
+  discharge_time: string | null;
+  stage: string;
+  chief_complaint: string;
+  vital_signs: any;
+  triage_notes: string;
+  questioning_findings: string;
+  lab_findings: string;
+  diagnosis: string;
+  treatment_plan: string;
+  final_findings: string;
+  lab_tests: any[];
+  prescription: any;
+}
 
 const PatientSummaryPage = () => {
   const { userId } = useParams();
   const { getPatientById } = usePatientQueue();
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [previousVisits, setPreviousVisits] = useState<Visit[]>([]);
+  const [showVisitHistory, setShowVisitHistory] = useState(false);
+  const [loadingVisits, setLoadingVisits] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,6 +44,56 @@ const PatientSummaryPage = () => {
       }
     }
   }, [userId, getPatientById]);
+
+  // Fetch previous visits when component mounts
+  useEffect(() => {
+    const fetchPreviousVisits = async () => {
+      if (!userId) return;
+      
+      setLoadingVisits(true);
+      try {
+        const token = localStorage.getItem('access_token');
+        
+        // First, get the patient data to find the actual patient ID
+        const patientResponse = await fetch(`${API_BASE_URL}/healthcare/patients/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (patientResponse.ok) {
+          const patients = await patientResponse.json();
+          const currentPatient = patients.find((p: any) => p.patient_id === userId);
+          
+          if (currentPatient) {
+            // Fetch visits for this patient
+            const visitsResponse = await fetch(`${API_BASE_URL}/healthcare/patients/${currentPatient.id}/visits/`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (visitsResponse.ok) {
+              const visits = await visitsResponse.json();
+              // Sort by check-in time, most recent first
+              const sortedVisits = visits.sort((a: Visit, b: Visit) => 
+                new Date(b.check_in_time).getTime() - new Date(a.check_in_time).getTime()
+              );
+              setPreviousVisits(sortedVisits);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching previous visits:', error);
+      } finally {
+        setLoadingVisits(false);
+      }
+    };
+
+    fetchPreviousVisits();
+  }, [userId]);
 
   if (!patient) {
     // Wait for client-side hydration to find the patient
@@ -202,6 +275,188 @@ const PatientSummaryPage = () => {
                 </div>
             </div>
           </section>
+
+          {/* Previous Visits Section */}
+          {previousVisits.length > 1 && (
+            <section className="mt-8 print:hidden">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold border-b pb-2 flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Previous Visits ({previousVisits.length - 1})
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowVisitHistory(!showVisitHistory)}
+                >
+                  {showVisitHistory ? (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-2" />
+                      Hide History
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                      Show History
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {showVisitHistory && (
+                <div className="space-y-4">
+                  {previousVisits.slice(1).map((visit, index) => (
+                    <Card key={visit.id} className="bg-muted/30">
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center justify-between">
+                          <span>Visit #{previousVisits.length - index - 1}</span>
+                          <div className="flex gap-2">
+                            <Badge variant={visit.stage === 'discharged' ? 'default' : 'secondary'}>
+                              {visit.stage.replace('_', ' ').toUpperCase()}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground font-normal">
+                              {new Date(visit.check_in_time).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Chief Complaint */}
+                        {visit.chief_complaint && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-1">Chief Complaint</h5>
+                            <p className="text-sm">{visit.chief_complaint}</p>
+                          </div>
+                        )}
+
+                        {/* Vital Signs */}
+                        {visit.vital_signs && Object.keys(visit.vital_signs).length > 0 && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-2">Vital Signs</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs bg-blue-50 dark:bg-blue-900/20 rounded p-3">
+                              {visit.vital_signs.height && (
+                                <div><span className="font-medium">Height:</span> {visit.vital_signs.height} cm</div>
+                              )}
+                              {visit.vital_signs.weight && (
+                                <div><span className="font-medium">Weight:</span> {visit.vital_signs.weight} kg</div>
+                              )}
+                              {visit.vital_signs.bloodPressure && (
+                                <div><span className="font-medium">BP:</span> {visit.vital_signs.bloodPressure}</div>
+                              )}
+                              {visit.vital_signs.temperature && (
+                                <div><span className="font-medium">Temp:</span> {visit.vital_signs.temperature}°C</div>
+                              )}
+                              {visit.vital_signs.pulse && (
+                                <div><span className="font-medium">Pulse:</span> {visit.vital_signs.pulse} bpm</div>
+                              )}
+                              {visit.vital_signs.respiratoryRate && (
+                                <div><span className="font-medium">Resp:</span> {visit.vital_signs.respiratoryRate}/min</div>
+                              )}
+                              {visit.vital_signs.oxygenSaturation && (
+                                <div><span className="font-medium">SpO2:</span> {visit.vital_signs.oxygenSaturation}%</div>
+                              )}
+                              {visit.vital_signs.bmi && (
+                                <div><span className="font-medium">BMI:</span> {visit.vital_signs.bmi}</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Triage Notes */}
+                        {visit.triage_notes && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-1">Triage Notes</h5>
+                            <p className="text-sm bg-background rounded p-2">{visit.triage_notes}</p>
+                          </div>
+                        )}
+
+                        {/* Doctor's Findings */}
+                        {visit.questioning_findings && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-1">Examination Findings</h5>
+                            <p className="text-sm bg-background rounded p-2 whitespace-pre-wrap">{visit.questioning_findings}</p>
+                          </div>
+                        )}
+
+                        {/* Lab Tests */}
+                        {visit.lab_tests && visit.lab_tests.length > 0 && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-1">Laboratory Tests</h5>
+                            <div className="space-y-2">
+                              {visit.lab_tests.map((test: any) => (
+                                <div key={test.id} className="text-sm bg-background rounded p-2">
+                                  <div className="flex justify-between items-start">
+                                    <span className="font-medium">{test.test_name}</span>
+                                    <Badge variant={test.status === 'completed' ? 'default' : 'secondary'} className="text-xs">
+                                      {test.status}
+                                    </Badge>
+                                  </div>
+                                  {test.results && (
+                                    <p className="text-xs text-muted-foreground mt-1">{test.results}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Lab Findings */}
+                        {visit.lab_findings && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-1">Lab Findings</h5>
+                            <p className="text-sm bg-background rounded p-2 whitespace-pre-wrap">{visit.lab_findings}</p>
+                          </div>
+                        )}
+
+                        {/* Diagnosis */}
+                        {visit.diagnosis && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-1">Diagnosis</h5>
+                            <p className="text-sm bg-green-50 dark:bg-green-900/20 rounded p-2 whitespace-pre-wrap">{visit.diagnosis}</p>
+                          </div>
+                        )}
+
+                        {/* Treatment Plan */}
+                        {visit.treatment_plan && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-1">Treatment Plan</h5>
+                            <p className="text-sm bg-background rounded p-2 whitespace-pre-wrap">{visit.treatment_plan}</p>
+                          </div>
+                        )}
+
+                        {/* Prescription */}
+                        {visit.prescription && visit.prescription.medications && visit.prescription.medications.length > 0 && (
+                          <div>
+                            <h5 className="font-semibold text-sm text-muted-foreground mb-1">Prescription</h5>
+                            <div className="bg-background rounded p-2 space-y-1">
+                              {visit.prescription.medications.map((med: any, idx: number) => (
+                                <div key={idx} className="text-sm">
+                                  <span className="font-medium">{med.name}</span> - {med.dose}, {med.frequency}, {med.duration}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Discharge Info */}
+                        {visit.discharge_time && (
+                          <div className="text-xs text-muted-foreground pt-2 border-t">
+                            Discharged: {new Date(visit.discharge_time).toLocaleString()}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {loadingVisits && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p>Loading visit history...</p>
+                </div>
+              )}
+            </section>
+          )}
           
           <footer className="mt-12 flex flex-col sm:flex-row justify-center items-center gap-4 text-center text-xs text-muted-foreground print:hidden">
             <Button onClick={handlePrint} className="w-full sm:w-auto">
