@@ -72,9 +72,11 @@ const PatientManagementHub = () => {
     setLoading(true);
     try {
       // Fetch all patients from the API
+      const token = localStorage.getItem('access_token');
       const response = await fetch(`${API_BASE_URL}/healthcare/patients/`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 
