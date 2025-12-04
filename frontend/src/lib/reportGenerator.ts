@@ -2,6 +2,13 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Type declaration for jspdf-autotable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: typeof autoTable;
+  }
+}
+
 export interface ReportData {
   title: string;
   subtitle?: string;
