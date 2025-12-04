@@ -56,11 +56,14 @@ class PatientViewSet(viewsets.ModelViewSet):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
+        # Make a mutable copy of request data
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        
         # Extract user data if provided
-        user_data = request.data.pop('user', None)
+        user_data = data.pop('user', None)
         
         # Update patient fields
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         
